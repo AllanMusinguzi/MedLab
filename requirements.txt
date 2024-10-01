@@ -1,0 +1,3 @@
+mysql-connector-python==8.0.27
+# tkinter is typically included with Python installations
+# If you're using any additional libraries, list them here
