@@ -84,10 +84,10 @@ class MedicalLabSystem:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load user page: {str(e)}")
 
-    def show_admin_page(self, admin_id, username, password):
+    def show_admin_page(self, user_id, username, password):
         try:
             self.clear_current_frame()
-            self.current_frame = AdminPage(self.master, self.db, admin_id, username, password, self.logout_callback)
+            self.current_frame = AdminPage(self.master, self.db, user_id, username, password, self.logout_callback)
             self.current_frame.pack(fill=tk.BOTH, expand=True)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load admin page: {str(e)}")

@@ -1,11 +1,12 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 
-class AdminPage(ttk.Frame):
-    def __init__(self, master, db, admin_id, username, password, logout_callback):
+class AdminPage(tk.Frame):
+    def __init__(self, master, db, user_id, username, password, logout_callback):
+        # Initialize the Admin page
         super().__init__(master)
         self.db = db
-        self.admin_id = admin_id
+        self.user_id = user_id  # Using 'user_id' instead of 'admin_id'
         self.username = username
         self.password = password
         self.logout_callback = logout_callback
@@ -83,13 +84,27 @@ class AdminPage(ttk.Frame):
         return patient_frame
 
     def load_users(self):
+        # Clear the listbox
         self.user_listbox.delete(0, tk.END)
+        
+        # Verify if the current user is an admin
         cursor = self.db.cursor()
-        cursor.execute("SELECT user_id, username, is_admin FROM users WHERE username = %s AND password = %s", (self.username, self.password))
-        for user in cursor.fetchall():
-            user_type = "Admin" if user[2] else "User"
-            self.user_listbox.insert(tk.END, f"{user[0]}: {user[1]} ({user_type})")
-        cursor.close()
+        cursor.execute("SELECT is_admin FROM users WHERE username = %s", (self.username,))
+        is_admin = cursor.fetchone()
+
+        if is_admin and is_admin[0]:  # Only if the current user is an admin
+            try:
+                # Load all users (not filtered by username/password)
+                cursor.execute("SELECT user_id, username, is_admin FROM users")
+                for user in cursor.fetchall():
+                    user_type = "Admin" if user[2] else "User"
+                    self.user_listbox.insert(tk.END, f"{user[0]}: {user[1]} ({user_type})")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load users: {str(e)}")
+            finally:
+                cursor.close()
+        else:
+            messagebox.showerror("Error", "You are not authorized to view this information.")
 
     def add_user(self):
         username = simpledialog.askstring("Add User", "Enter username:")
@@ -159,7 +174,7 @@ class AdminPage(ttk.Frame):
     def load_tests(self):
         self.test_listbox.delete(0, tk.END)
         cursor = self.db.cursor()
-        cursor.execute("SELECT id, test_name FROM tests")
+        cursor.execute("SELECT test_id, test_name FROM tests")
         for test in cursor.fetchall():
             self.test_listbox.insert(tk.END, f"{test[0]}: {test[1]}")
         cursor.close()
@@ -186,7 +201,7 @@ class AdminPage(ttk.Frame):
             if new_test_name:
                 cursor = self.db.cursor()
                 try:
-                    cursor.execute("UPDATE tests SET test_name = %s WHERE id = %s", (new_test_name, test_id))
+                    cursor.execute("UPDATE tests SET test_name = %s WHERE test_id = %s", (new_test_name, test_id))
                     self.db.commit()
                     messagebox.showinfo("Success", "Test modified successfully")
                     self.load_tests()
@@ -202,7 +217,7 @@ class AdminPage(ttk.Frame):
             if messagebox.askyesno("Delete Test", "Are you sure you want to delete this test?"):
                 cursor = self.db.cursor()
                 try:
-                    cursor.execute("DELETE FROM tests WHERE id = %s", (test_id,))
+                    cursor.execute("DELETE FROM tests WHERE test_id = %s", (test_id,))
                     self.db.commit()
                     messagebox.showinfo("Success", "Test deleted successfully")
                     self.load_tests()
@@ -214,7 +229,7 @@ class AdminPage(ttk.Frame):
     def load_patients(self):
         self.patient_listbox.delete(0, tk.END)
         cursor = self.db.cursor()
-        cursor.execute("SELECT id, patient_name FROM patients")
+        cursor.execute("SELECT patient_id, full_name FROM patients")
         for patient in cursor.fetchall():
             self.patient_listbox.insert(tk.END, f"{patient[0]}: {patient[1]}")
         cursor.close()
@@ -223,7 +238,26 @@ class AdminPage(ttk.Frame):
         selection = self.patient_listbox.curselection()
         if selection:
             patient_id = int(self.patient_listbox.get(selection[0]).split(':')[0])
-            # Implement patient viewing logic here
+            cursor = self.db.cursor()
+            try:
+                cursor.execute("SELECT * FROM patients WHERE patient_id = %s", (patient_id,))
+                patient = cursor.fetchone()
+                if patient:
+                    info = f"Patient_ID: {patient[0]}\n"
+                    info += f"Name: {patient[1]}\n"
+                    info += f"Phone: {patient[2]}\n"
+                    info += f"Gender: {patient[3]}\n"
+                    info += f"DOB: {patient[4]}\n"
+                    info += f"Age: {patient[5]}\n"
+                    info += f"Address: {patient[6]}\n"
+                    info += f"Medical History: {patient[7]}"
+                    messagebox.showinfo("Patient Information", info)
+                else:
+                    messagebox.showinfo("Not Found", "Patient not found")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to view patient: {str(e)}")
+            finally:
+                cursor.close()
 
     def delete_patient(self):
         selection = self.patient_listbox.curselection()
@@ -232,7 +266,7 @@ class AdminPage(ttk.Frame):
             if messagebox.askyesno("Delete Patient", "Are you sure you want to delete this patient?"):
                 cursor = self.db.cursor()
                 try:
-                    cursor.execute("DELETE FROM patients WHERE id = %s", (patient_id,))
+                    cursor.execute("DELETE FROM patients WHERE patient_id = %s", (patient_id,))
                     self.db.commit()
                     messagebox.showinfo("Success", "Patient deleted successfully")
                     self.load_patients()

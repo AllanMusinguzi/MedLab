@@ -126,7 +126,7 @@ class UserPage(ttk.Frame):
             # Add selected tests
             selected_tests = [self.tests_listbox.get(i) for i in self.tests_listbox.curselection()]
             for test in selected_tests:
-                cursor.execute("SELECT id FROM tests WHERE test_name = %s", (test,))
+                cursor.execute("SELECT test_id FROM tests WHERE test_name = %s", (test,))
                 test_id = cursor.fetchone()[0]
                 cursor.execute("INSERT INTO tests (patient_id, test_id) VALUES (%s, %s)", (patient_id, test_id))
 
@@ -174,7 +174,7 @@ class UserPage(ttk.Frame):
             cursor.execute("DELETE FROM tests WHERE patient_id = %s", (patient[0],))
             selected_tests = [self.tests_listbox.get(i) for i in self.tests_listbox.curselection()]
             for test in selected_tests:
-                cursor.execute("SELECT id FROM tests WHERE test_name = %s", (test,))
+                cursor.execute("SELECT test_id FROM tests WHERE test_name = %s", (test,))
                 test_id = cursor.fetchone()[0]
                 cursor.execute("INSERT INTO tests (patient_id, test_id) VALUES (%s, %s)", (patient[0], test_id))
 
