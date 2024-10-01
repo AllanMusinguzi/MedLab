@@ -70,11 +70,11 @@ class LoginSignup(ttk.Frame):
 
         cursor = self.db.cursor()
         try:
-            cursor.execute("SELECT id, password, is_admin FROM users WHERE username = %s", (username,))
+            cursor.execute("SELECT user_id, password, is_admin FROM users WHERE username = %s", (username,))
             user = cursor.fetchone()
 
             if user and bcrypt.checkpw(password.encode('utf-8'), user[1].encode('utf-8')):
-                self.login_callback(user[0], user[2])
+                self.login_callback(user[0], user[2], username, password)  # Pass username and password
             else:
                 messagebox.showerror("Error", "Invalid username or password.")
         except Exception as e:
@@ -98,7 +98,7 @@ class LoginSignup(ttk.Frame):
 
         cursor = self.db.cursor()
         try:
-            cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+            cursor.execute("SELECT user_id FROM users WHERE username = %s", (username,))
             if cursor.fetchone():
                 messagebox.showerror("Error", "Username already exists.")
                 return

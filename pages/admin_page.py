@@ -1,12 +1,13 @@
-# admin_page.py
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 
 class AdminPage(ttk.Frame):
-    def __init__(self, master, db, admin_id, logout_callback):
+    def __init__(self, master, db, admin_id, username, password, logout_callback):
         super().__init__(master)
         self.db = db
         self.admin_id = admin_id
+        self.username = username
+        self.password = password
         self.logout_callback = logout_callback
 
         self.style = ttk.Style()
@@ -15,12 +16,76 @@ class AdminPage(ttk.Frame):
 
         self.create_widgets()
 
-    # ... (previous code remains the same)
+    def create_widgets(self):
+        # Main frame
+        main_frame = ttk.Frame(self, padding="10")
+        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+
+        # User Management Frame
+        self.user_frame = self.create_user_management_frame(main_frame)
+        self.user_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
+
+        # Test Management Frame
+        self.test_frame = self.create_test_management_frame(main_frame)
+        self.test_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
+
+        # Patient Management Frame
+        self.patient_frame = self.create_patient_management_frame(main_frame)
+        self.patient_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
+
+        # Logout Button
+        ttk.Button(main_frame, text="Logout", command=self.logout_callback).grid(row=3, column=0, sticky=tk.E, pady=10)
+
+    def create_user_management_frame(self, parent):
+        user_frame = ttk.LabelFrame(parent, text="User Management", padding="10")
+        
+        self.user_listbox = tk.Listbox(user_frame)
+        self.user_listbox.pack(fill=tk.BOTH, expand=True)
+        self.load_users()
+
+        user_buttons = ttk.Frame(user_frame)
+        user_buttons.pack(fill=tk.X, pady=5)
+        ttk.Button(user_buttons, text="Add User", command=self.add_user).pack(side=tk.LEFT, padx=5)
+        ttk.Button(user_buttons, text="Modify User", command=self.modify_user).pack(side=tk.LEFT, padx=5)
+        ttk.Button(user_buttons, text="Delete User", command=self.delete_user).pack(side=tk.LEFT, padx=5)
+
+        return user_frame
+
+    def create_test_management_frame(self, parent):
+        test_frame = ttk.LabelFrame(parent, text="Test Management", padding="10")
+
+        self.test_listbox = tk.Listbox(test_frame)
+        self.test_listbox.pack(fill=tk.BOTH, expand=True)
+        self.load_tests()
+
+        test_buttons = ttk.Frame(test_frame)
+        test_buttons.pack(fill=tk.X, pady=5)
+        ttk.Button(test_buttons, text="Add Test", command=self.add_test).pack(side=tk.LEFT, padx=5)
+        ttk.Button(test_buttons, text="Modify Test", command=self.modify_test).pack(side=tk.LEFT, padx=5)
+        ttk.Button(test_buttons, text="Delete Test", command=self.delete_test).pack(side=tk.LEFT, padx=5)
+
+        return test_frame
+
+    def create_patient_management_frame(self, parent):
+        patient_frame = ttk.LabelFrame(parent, text="Patient Management", padding="10")
+
+        self.patient_listbox = tk.Listbox(patient_frame)
+        self.patient_listbox.pack(fill=tk.BOTH, expand=True)
+        self.load_patients()
+
+        patient_buttons = ttk.Frame(patient_frame)
+        patient_buttons.pack(fill=tk.X, pady=5)
+        ttk.Button(patient_buttons, text="View Patient", command=self.view_patient).pack(side=tk.LEFT, padx=5)
+        ttk.Button(patient_buttons, text="Delete Patient", command=self.delete_patient).pack(side=tk.LEFT, padx=5)
+
+        return patient_frame
 
     def load_users(self):
         self.user_listbox.delete(0, tk.END)
         cursor = self.db.cursor()
-        cursor.execute("SELECT id, username, is_admin FROM users")
+        cursor.execute("SELECT user_id, username, is_admin FROM users WHERE username = %s AND password = %s", (self.username, self.password))
         for user in cursor.fetchall():
             user_type = "Admin" if user[2] else "User"
             self.user_listbox.insert(tk.END, f"{user[0]}: {user[1]} ({user_type})")
@@ -66,7 +131,7 @@ class AdminPage(ttk.Frame):
 
             cursor = self.db.cursor()
             try:
-                cursor.execute(f"UPDATE users SET {', '.join(update_fields)} WHERE id = %s", tuple(values))
+                cursor.execute(f"UPDATE users SET {', '.join(update_fields)} WHERE user_id = %s", tuple(values))
                 self.db.commit()
                 messagebox.showinfo("Success", "User modified successfully")
                 self.load_users()
@@ -82,7 +147,7 @@ class AdminPage(ttk.Frame):
             if messagebox.askyesno("Delete User", "Are you sure you want to delete this user?"):
                 cursor = self.db.cursor()
                 try:
-                    cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+                    cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
                     self.db.commit()
                     messagebox.showinfo("Success", "User deleted successfully")
                     self.load_users()
@@ -149,47 +214,27 @@ class AdminPage(ttk.Frame):
     def load_patients(self):
         self.patient_listbox.delete(0, tk.END)
         cursor = self.db.cursor()
-        cursor.execute("SELECT id, full_name, phone_number FROM patients")
+        cursor.execute("SELECT id, patient_name FROM patients")
         for patient in cursor.fetchall():
-            self.patient_listbox.insert(tk.END, f"{patient[0]}: {patient[1]} ({patient[2]})")
+            self.patient_listbox.insert(tk.END, f"{patient[0]}: {patient[1]}")
         cursor.close()
 
     def view_patient(self):
         selection = self.patient_listbox.curselection()
         if selection:
             patient_id = int(self.patient_listbox.get(selection[0]).split(':')[0])
-            cursor = self.db.cursor()
-            try:
-                cursor.execute("SELECT * FROM patients WHERE id = %s", (patient_id,))
-                patient = cursor.fetchone()
-                if patient:
-                    info = f"ID: {patient[0]}\n"
-                    info += f"Name: {patient[1]}\n"
-                    info += f"Phone: {patient[2]}\n"
-                    info += f"Gender: {patient[3]}\n"
-                    info += f"DOB: {patient[4]}\n"
-                    info += f"Age: {patient[5]}\n"
-                    info += f"Address: {patient[6]}\n"
-                    info += f"Medical History: {patient[7]}"
-                    messagebox.showinfo("Patient Information", info)
-                else:
-                    messagebox.showinfo("Not Found", "Patient not found")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to view patient: {str(e)}")
-            finally:
-                cursor.close()
+            # Implement patient viewing logic here
 
     def delete_patient(self):
         selection = self.patient_listbox.curselection()
         if selection:
             patient_id = int(self.patient_listbox.get(selection[0]).split(':')[0])
-            if messagebox.askyesno("Delete Patient", "Are you sure you want to delete this patient and all their records?"):
+            if messagebox.askyesno("Delete Patient", "Are you sure you want to delete this patient?"):
                 cursor = self.db.cursor()
                 try:
-                    cursor.execute("DELETE FROM patient_tests WHERE patient_id = %s", (patient_id,))
                     cursor.execute("DELETE FROM patients WHERE id = %s", (patient_id,))
                     self.db.commit()
-                    messagebox.showinfo("Success", "Patient and their records deleted successfully")
+                    messagebox.showinfo("Success", "Patient deleted successfully")
                     self.load_patients()
                 except Exception as e:
                     messagebox.showerror("Error", f"Failed to delete patient: {str(e)}")

@@ -77,24 +77,33 @@ class MedicalLabSystem:
         self.current_frame.pack(fill=tk.BOTH, expand=True)
 
     def show_user_page(self, user_id):
-        self.clear_current_frame()
-        self.current_frame = UserPage(self.master, self.db, user_id, self.logout_callback)
-        self.current_frame.pack(fill=tk.BOTH, expand=True)
+        try:
+            self.clear_current_frame()
+            self.current_frame = UserPage(self.master, self.db, user_id, self.logout_callback)
+            self.current_frame.pack(fill=tk.BOTH, expand=True)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load user page: {str(e)}")
 
-    def show_admin_page(self, admin_id):
-        self.clear_current_frame()
-        self.current_frame = AdminPage(self.master, self.db, admin_id, self.logout_callback)
-        self.current_frame.pack(fill=tk.BOTH, expand=True)
+    def show_admin_page(self, admin_id, username, password):
+        try:
+            self.clear_current_frame()
+            self.current_frame = AdminPage(self.master, self.db, admin_id, username, password, self.logout_callback)
+            self.current_frame.pack(fill=tk.BOTH, expand=True)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load admin page: {str(e)}")
 
     def clear_current_frame(self):
         if self.current_frame:
             self.current_frame.destroy()
 
-    def login_callback(self, user_id, is_admin):
-        if is_admin:
-            self.show_admin_page(user_id)
-        else:
-            self.show_user_page(user_id)
+    def login_callback(self, user_id, is_admin, username, password):
+        try:
+            if is_admin:
+                self.show_admin_page(user_id, username, password)
+            else:
+                self.show_user_page(user_id)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load page: {str(e)}")
 
     def logout_callback(self):
         self.show_login_signup()
