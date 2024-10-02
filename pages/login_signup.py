@@ -1,4 +1,3 @@
-# login_signup.py
 import tkinter as tk
 from tkinter import ttk, messagebox
 import bcrypt
@@ -42,23 +41,47 @@ class LoginSignup(ttk.Frame):
 
         ttk.Button(self.login_frame, text="Login", command=self.login).grid(row=2, column=1, sticky=tk.E, pady=10)
 
+        # Center the login form
+        for i in range(3):
+            self.login_frame.grid_rowconfigure(i, weight=1)
+        self.login_frame.grid_columnconfigure(0, weight=1)
+        self.login_frame.grid_columnconfigure(1, weight=1)
+
     def create_signup_form(self):
-        ttk.Label(self.signup_frame, text="Username:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Label(self.signup_frame, text="Full Name:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.signup_full_name = ttk.Entry(self.signup_frame, width=30)
+        self.signup_full_name.grid(row=0, column=1, pady=5)
+
+        ttk.Label(self.signup_frame, text="Email:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.signup_email = ttk.Entry(self.signup_frame, width=30)
+        self.signup_email.grid(row=1, column=1, pady=5)
+
+        ttk.Label(self.signup_frame, text="Phone Number:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        self.signup_phone_number = ttk.Entry(self.signup_frame, width=30)
+        self.signup_phone_number.grid(row=2, column=1, pady=5)
+
+        ttk.Label(self.signup_frame, text="Username:").grid(row=3, column=0, sticky=tk.W, pady=5)
         self.signup_username = ttk.Entry(self.signup_frame, width=30)
-        self.signup_username.grid(row=0, column=1, pady=5)
+        self.signup_username.grid(row=3, column=1, pady=5)
 
-        ttk.Label(self.signup_frame, text="Password:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Label(self.signup_frame, text="Password:").grid(row=4, column=0, sticky=tk.W, pady=5)
         self.signup_password = ttk.Entry(self.signup_frame, show="*", width=30)
-        self.signup_password.grid(row=1, column=1, pady=5)
+        self.signup_password.grid(row=4, column=1, pady=5)
 
-        ttk.Label(self.signup_frame, text="Confirm Password:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        ttk.Label(self.signup_frame, text="Confirm Password:").grid(row=5, column=0, sticky=tk.W, pady=5)
         self.signup_confirm_password = ttk.Entry(self.signup_frame, show="*", width=30)
-        self.signup_confirm_password.grid(row=2, column=1, pady=5)
+        self.signup_confirm_password.grid(row=5, column=1, pady=5)
 
         self.is_admin_var = tk.BooleanVar()
-        ttk.Checkbutton(self.signup_frame, text="Admin User", variable=self.is_admin_var).grid(row=3, column=1, sticky=tk.W, pady=5)
+        ttk.Checkbutton(self.signup_frame, text="Admin User", variable=self.is_admin_var).grid(row=6, column=1, sticky=tk.W, pady=5)
 
-        ttk.Button(self.signup_frame, text="Sign Up", command=self.signup).grid(row=4, column=1, sticky=tk.E, pady=10)
+        ttk.Button(self.signup_frame, text="Sign Up", command=self.signup).grid(row=7, column=1, sticky=tk.E, pady=10)
+
+        # Center the signup form
+        for i in range(8):
+            self.signup_frame.grid_rowconfigure(i, weight=1)
+        self.signup_frame.grid_columnconfigure(0, weight=1)
+        self.signup_frame.grid_columnconfigure(1, weight=1)
 
     def login(self):
         username = self.login_username.get()
@@ -70,17 +93,23 @@ class LoginSignup(ttk.Frame):
 
         cursor = self.db.cursor()
         try:
-            cursor.execute("SELECT user_id, password, is_admin FROM users WHERE username = %s", (username,))
+            cursor.execute("SELECT user_id, password, phone_number, is_admin FROM users WHERE username = %s", (username,))
             user = cursor.fetchone()
 
             if user and bcrypt.checkpw(password.encode('utf-8'), user[1].encode('utf-8')):
-                self.login_callback(user[0], user[2], username, password)  # Pass username and password
+                self.user_id = user[0]  # Set user_id
+                self.username = username  # Set username
+                self.phone_number = user[2]  # Set phone_number information
+                
+                # Call the login callback with relevant information
+                self.login_callback(user[0], user[3], username, password, user[2])  # Pass username and password
             else:
                 messagebox.showerror("Error", "Invalid username or password.")
         except Exception as e:
             messagebox.showerror("Error", f"Login failed: {str(e)}")
         finally:
             cursor.close()
+
 
     def signup(self):
         username = self.signup_username.get()

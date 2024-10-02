@@ -1,10 +1,8 @@
-# main.py
 import tkinter as tk
 from tkinter import ttk, messagebox
 import mysql.connector
 from mysql.connector import Error
 import threading
-import time
 from pages.login_signup import LoginSignup
 from pages.user_page import UserPage
 from pages.admin_page import AdminPage
@@ -13,7 +11,7 @@ class LoadingScreen(tk.Toplevel):
     def __init__(self, master):
         super().__init__(master)
         self.title("Loading")
-        self.geometry("300x100")
+        self.geometry("500x300")
         self.resizable(False, False)
         self.configure(bg='white')
         self.transient(master)
@@ -27,12 +25,13 @@ class MedicalLabSystem:
     def __init__(self, master):
         self.master = master
         self.master.title("Medical Lab System")
-        self.master.geometry("800x600")
+        self.master.geometry("1366x768")
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.style = ttk.Style()
         self.style.theme_use('clam')
-        self.style.configure('.', font=('Ubuntu', 10))
+        self.style.configure('.', font=('Ubuntu', 12))
+        self.style.configure('TButton', anchor='center')
 
         self.db = None
         self.current_frame = None
@@ -84,10 +83,10 @@ class MedicalLabSystem:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load user page: {str(e)}")
 
-    def show_admin_page(self, user_id, username, password):
+    def show_admin_page(self, user_id, username, password, phone_number):
         try:
             self.clear_current_frame()
-            self.current_frame = AdminPage(self.master, self.db, user_id, username, password, self.logout_callback)
+            self.current_frame = AdminPage(self.master, self.db, user_id, username, password, phone_number, self.logout_callback)
             self.current_frame.pack(fill=tk.BOTH, expand=True)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load admin page: {str(e)}")
@@ -96,10 +95,10 @@ class MedicalLabSystem:
         if self.current_frame:
             self.current_frame.destroy()
 
-    def login_callback(self, user_id, is_admin, username, password):
+    def login_callback(self, user_id, is_admin, username, password, phone_number):
         try:
             if is_admin:
-                self.show_admin_page(user_id, username, password)
+                self.show_admin_page(user_id, username, password, phone_number)
             else:
                 self.show_user_page(user_id)
         except Exception as e:

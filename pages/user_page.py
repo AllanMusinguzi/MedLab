@@ -15,7 +15,7 @@ class UserPage(ttk.Frame):
 
         self.style = ttk.Style()
         self.style.theme_use('clam')
-        self.style.configure('.', font=('Ubuntu', 10))
+        self.style.configure('.', font=('Ubuntu', 12))
 
         self.create_widgets()
     
