@@ -227,13 +227,15 @@ class AdminPage(tk.Frame):
         test_frame.rowconfigure(0, weight=1)
 
         # Create a Treeview widget for displaying tests in a table format
-        self.test_tree = ttk.Treeview(test_frame, columns=("ID", "Test Name"), show="headings", height=8)
+        self.test_tree = ttk.Treeview(test_frame, columns=("ID", "Test Name", "Description"), show="headings", height=8)
         self.test_tree.heading("ID", text="Test ID")
         self.test_tree.heading("Test Name", text="Test Name")
+        self.test_tree.heading("Description", text="Description")
         
         # Define column widths
-        self.test_tree.column("ID", width=100)
-        self.test_tree.column("Test Name", width=200)
+        self.test_tree.column("ID", width=50)
+        self.test_tree.column("Test Name", width=100)
+        self.test_tree.column("Description", width=300)
         
         # Add row and column separators (gridlines) with styling
         style = ttk.Style()
@@ -274,22 +276,23 @@ class AdminPage(tk.Frame):
         
         # Load all tests from the database
         cursor = self.db.cursor()
-        cursor.execute("SELECT test_id, test_name FROM tests")
+        cursor.execute("SELECT test_id, test_name, description FROM tests")
         count = 0  # Counter to track row for alternating color
         for test in cursor.fetchall():
             if count % 2 == 0:
-                self.test_tree.insert("", tk.END, values=(test[0], test[1]), tags=('evenrow',))
+                self.test_tree.insert("", tk.END, values=(test[0], test[1], test[2]), tags=('evenrow',))
             else:
-                self.test_tree.insert("", tk.END, values=(test[0], test[1]), tags=('oddrow',))
+                self.test_tree.insert("", tk.END, values=(test[0], test[1], test[2]), tags=('oddrow',))
             count += 1
         cursor.close()
 
     def add_test(self):
         test_name = simpledialog.askstring("Add Test", "Enter test name:")
-        if test_name:
+        description = simpledialog.askstring("Add Description", "Enter test description:")
+        if test_name and description:
             cursor = self.db.cursor()
             try:
-                cursor.execute("INSERT INTO tests (test_name) VALUES (%s)", (test_name,))
+                cursor.execute("INSERT INTO tests (test_name, description) VALUES (%s, %s)", (test_name, description,))
                 self.db.commit()
                 messagebox.showinfo("Success", "Test added successfully")
                 self.load_tests()
@@ -304,17 +307,17 @@ class AdminPage(tk.Frame):
             # Get the selected test ID from the listbox
             test_id = int(self.test_listbox.get(selection[0]).split(':')[0])
             
-            # Prompt for the new test name
             new_test_name = simpledialog.askstring("Modify Test", "Enter new test name:")
+            new_description = simpledialog.askstring("Modify Description", "Enter Modiffied description:")
             
             if new_test_name:
                 cursor = self.db.cursor()
                 try:
-                    # Update the test name in the database
-                    cursor.execute("UPDATE tests SET test_name = %s WHERE test_id = %s", (new_test_name, test_id))
+                    # Update the test name and description in the database
+                    cursor.execute("UPDATE tests SET test_name = %s and description = %s WHERE test_id = %s", (new_test_name, new_description, test_id))
                     self.db.commit()
                     messagebox.showinfo("Success", "Test modified successfully")
-                    self.load_tests()  # Reload tests to reflect changes
+                    self.load_tests()  
                 except Exception as e:
                     messagebox.showerror("Error", f"Failed to modify test: {str(e)}")
                 finally:

@@ -14,15 +14,17 @@ class UserPage(ttk.Frame):
 
         self.style = ttk.Style()
         self.style.theme_use('clam')
+
+        tests_results_frame = ttk.Frame(self)
+        tests_results_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # Configure colors
-        self.style.configure('.', font=('Helvetica', 12))
+        self.style.configure('.', font=('Ubuntu', 11))
         self.style.configure('TFrame', background='#f0f0f0')
         self.style.configure('TLabelframe', background='#f0f0f0')
         self.style.configure('TLabel', background='#f0f0f0')
         self.style.configure('TButton', background='#4a7abc', foreground='white')
         self.style.map('TButton', background=[('active', '#3a5a8c')])
-        self.style.configure('Header.TLabel', font=('Helvetica', 16, 'bold'), foreground='#2c3e50')
+        self.style.configure('Header.TLabel', font=('Ubuntu', 12, 'bold')) #, foreground='#2c3e50'
 
         self.create_widgets()
 
@@ -31,7 +33,7 @@ class UserPage(ttk.Frame):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
-        main_frame = ttk.Frame(self, padding="20", style='TFrame')
+        main_frame = ttk.Frame(self, padding="10", style='TFrame')
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         main_frame.columnconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
@@ -39,11 +41,11 @@ class UserPage(ttk.Frame):
         # Header
         header_frame = ttk.Frame(main_frame, style='TFrame')
         header_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 20))
-        ttk.Label(header_frame, text="Patient Management System", style='Header.TLabel').pack(side=tk.LEFT)
+        ttk.Label(header_frame, text="Patient Management", style='Header.TLabel').pack(side=tk.LEFT)
         ttk.Button(header_frame, text="Logout", command=self.logout_callback).pack(side=tk.RIGHT)
 
         # Patient Information Frame
-        patient_frame = ttk.LabelFrame(main_frame, text="Patient Information", padding="20", style='TLabelframe')
+        patient_frame = ttk.LabelFrame(main_frame, text="Patient Information", padding="10", style='TLabelframe', labelanchor="n")
         patient_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 10), pady=(0, 20))
         patient_frame.columnconfigure(1, weight=1)
 
@@ -82,18 +84,15 @@ class UserPage(ttk.Frame):
         tests_results_frame.columnconfigure(0, weight=1)
         tests_results_frame.rowconfigure(1, weight=1)
 
-        # Tests Frame
-        tests_frame = ttk.LabelFrame(tests_results_frame, text="Tests", padding="20", style='TLabelframe')
-        tests_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
-        tests_frame.columnconfigure(0, weight=1)
-        tests_frame.rowconfigure(0, weight=1)
-
-        self.tests_listbox = tk.Listbox(tests_frame, selectmode=tk.MULTIPLE, background='white', selectbackground='#4a7abc')
-        self.tests_listbox.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # Define self.tests_frame inside tests_results_frame
+        self.tests_frame = ttk.LabelFrame(tests_results_frame, text="Tests", padding="10", style='TLabelframe', labelanchor="n")
+        self.tests_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        self.tests_frame.columnconfigure(0, weight=1)
+        self.tests_frame.rowconfigure(0, weight=1)
         self.load_tests()
 
         # Results Frame
-        results_frame = ttk.LabelFrame(tests_results_frame, text="Test Results", padding="20", style='TLabelframe')
+        results_frame = ttk.LabelFrame(tests_results_frame, text="Test Results", padding="10", style='TLabelframe', labelanchor="n")
         results_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
         results_frame.columnconfigure(0, weight=1)
         results_frame.rowconfigure(0, weight=1)
@@ -126,10 +125,35 @@ class UserPage(ttk.Frame):
         self.age_var.set(str(age))
 
     def load_tests(self):
+        # Create Treeview widget inside the tests_frame
+        self.tree = ttk.Treeview(self.tests_frame, columns=("Test ID", "Test Name", "Description"), show="headings")
+        
+        # Define headings
+        self.tree.heading("Test ID", text="Test ID")
+        self.tree.heading("Test Name", text="Test Name")
+        self.tree.heading("Description", text="Description")
+
+        # Set column widths (optional)
+        self.tree.column("Test ID", width=50)
+        self.tree.column("Test Name", width=100)
+        self.tree.column("Description", width=300)
+
+        # Add Treeview to the grid inside the tests_frame
+        self.tree.grid(row=0, column=0, sticky="nsew")
+
+        # Enable scrolling if needed
+        scrollbar = ttk.Scrollbar(self.tests_frame, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscroll=scrollbar.set)
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        # Load data from the database
         cursor = self.db.cursor()
-        cursor.execute("SELECT test_name FROM tests")
+        cursor.execute("SELECT test_id, test_name, description FROM tests")
+
+        # Insert data into the Treeview
         for test in cursor.fetchall():
-            self.tests_listbox.insert(tk.END, test[0])
+            self.tree.insert("", tk.END, values=(test[0], test[1], test[2]))
+
         cursor.close()
 
     def add_patient(self):
@@ -147,7 +171,7 @@ class UserPage(ttk.Frame):
             messagebox.showerror("Error", "All fields except Medical History are required.")
             return
 
-        # Insert patient into database
+        # Insert patient into the database
         cursor = self.db.cursor()
         try:
             cursor.execute("""
@@ -157,15 +181,25 @@ class UserPage(ttk.Frame):
             
             patient_id = cursor.lastrowid
 
-            # Add selected tests
-            selected_tests = [self.tests_listbox.get(i) for i in self.tests_listbox.curselection()]
-            for test in selected_tests:
-                cursor.execute("SELECT test_id FROM tests WHERE test_name = %s", (test,))
-                test_id = cursor.fetchone()[0]
-                cursor.execute("INSERT INTO tests (patient_id, test_id) VALUES (%s, %s)", (patient_id, test_id))
+            """"    
+
+                # Add selected tests to patient_tests table
+                selected_items = self.tree.selection()  
+                selected_tests = [self.tree.item(item)['values'][0] for item in selected_items]  # Adjust index as needed
+
+                for test in selected_tests:
+                    cursor.execute("SELECT test_id FROM tests WHERE test_name = %s", (test,))
+                    result = cursor.fetchone()
+                    if result is None:
+                        raise ValueError(f"Test '{test}' not found in the database")
+                    
+                    test_id = result[0]
+                    cursor.execute("INSERT INTO patient_tests (patient_id, test_id) VALUES (%s, %s)", (patient_id, test_id))
+
+            """
 
             self.db.commit()
-            messagebox.showinfo("Success", "Patient added successfully")
+            messagebox.showinfo("Success", "Patient and tests added successfully")
             self.clear_fields()
         except Exception as e:
             self.db.rollback()
@@ -206,7 +240,7 @@ class UserPage(ttk.Frame):
 
             # Update tests
             cursor.execute("DELETE FROM tests WHERE patient_id = %s", (patient[0],))
-            selected_tests = [self.tests_listbox.get(i) for i in self.tests_listbox.curselection()]
+            selected_tests = [self.tree.get(i) for i in self.tree.selection()]
             for test in selected_tests:
                 cursor.execute("SELECT test_id FROM tests WHERE test_name = %s", (test,))
                 test_id = cursor.fetchone()[0]
@@ -257,10 +291,10 @@ class UserPage(ttk.Frame):
             """, (patient[0],))
             tests = [test[0] for test in cursor.fetchall()]
             
-            self.tests_listbox.selection_clear(0, tk.END)
-            for i in range(self.tests_listbox.size()):
-                if self.tests_listbox.get(i) in tests:
-                    self.tests_listbox.selection_set(i)
+            self.tree.selection_clear(0, tk.END)
+            for i in range(self.tree.size()):
+                if self.tree.get(i) in tests:
+                    self.tree.selection_set(i)
 
             messagebox.showinfo("Success", "Patient information loaded successfully")
         except Exception as e:
@@ -325,7 +359,7 @@ class UserPage(ttk.Frame):
         self.age_var.set("")
         self.address_entry.delete(0, tk.END)
         self.history_entry.delete(0, tk.END)
-        self.tests_listbox.selection_clear(0, tk.END)
+        self.tree.selection_clear(0, tk.END)
         self.results_text.delete('1.0', tk.END)
     
     def logout(self):
