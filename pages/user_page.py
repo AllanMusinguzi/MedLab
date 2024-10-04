@@ -1,4 +1,3 @@
-# user_page.py
 import tkinter as tk
 from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
@@ -15,75 +14,110 @@ class UserPage(ttk.Frame):
 
         self.style = ttk.Style()
         self.style.theme_use('clam')
-        self.style.configure('.', font=('Ubuntu', 12))
+        
+        # Configure colors
+        self.style.configure('.', font=('Helvetica', 12))
+        self.style.configure('TFrame', background='#f0f0f0')
+        self.style.configure('TLabelframe', background='#f0f0f0')
+        self.style.configure('TLabel', background='#f0f0f0')
+        self.style.configure('TButton', background='#4a7abc', foreground='white')
+        self.style.map('TButton', background=[('active', '#3a5a8c')])
+        self.style.configure('Header.TLabel', font=('Helvetica', 16, 'bold'), foreground='#2c3e50')
 
         self.create_widgets()
-    
+
     def create_widgets(self):
-        # Main frame
-        main_frame = ttk.Frame(self, padding="10")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.configure(style='TFrame')
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
+        main_frame = ttk.Frame(self, padding="20", style='TFrame')
+        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.columnconfigure(1, weight=1)
+
+        # Header
+        header_frame = ttk.Frame(main_frame, style='TFrame')
+        header_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 20))
+        ttk.Label(header_frame, text="Patient Management System", style='Header.TLabel').pack(side=tk.LEFT)
+        ttk.Button(header_frame, text="Logout", command=self.logout_callback).pack(side=tk.RIGHT)
+
         # Patient Information Frame
-        patient_frame = ttk.LabelFrame(main_frame, text="Patient Information", padding="10")
-        patient_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
+        patient_frame = ttk.LabelFrame(main_frame, text="Patient Information", padding="20", style='TLabelframe')
+        patient_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 10), pady=(0, 20))
+        patient_frame.columnconfigure(1, weight=1)
 
-        ttk.Label(patient_frame, text="Phone Number:").grid(row=0, column=0, sticky=tk.W)
+        labels = ["Phone Number:", "Full Name:", "Gender:", "Date of Birth:", "Age:", "Address:", "Medical History:"]
+        for i, label in enumerate(labels):
+            ttk.Label(patient_frame, text=label).grid(row=i, column=0, sticky=tk.W, pady=5)
+
         self.phone_entry = ttk.Entry(patient_frame)
-        self.phone_entry.grid(row=0, column=1, sticky=(tk.W, tk.E))
+        self.phone_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=5)
 
-        ttk.Label(patient_frame, text="Full Name:").grid(row=1, column=0, sticky=tk.W)
         self.name_entry = ttk.Entry(patient_frame)
-        self.name_entry.grid(row=1, column=1, sticky=(tk.W, tk.E))
+        self.name_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=5)
 
-        ttk.Label(patient_frame, text="Gender:").grid(row=2, column=0, sticky=tk.W)
+        gender_frame = ttk.Frame(patient_frame, style='TFrame')
+        gender_frame.grid(row=2, column=1, sticky=(tk.W, tk.E), pady=5)
         self.gender_var = tk.StringVar()
-        ttk.Radiobutton(patient_frame, text="Male", variable=self.gender_var, value="Male").grid(row=2, column=1, sticky=tk.W)
-        ttk.Radiobutton(patient_frame, text="Female", variable=self.gender_var, value="Female").grid(row=2, column=1, sticky=tk.E)
+        ttk.Radiobutton(gender_frame, text="Male", variable=self.gender_var, value="Male").pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Radiobutton(gender_frame, text="Female", variable=self.gender_var, value="Female").pack(side=tk.LEFT)
 
-        ttk.Label(patient_frame, text="Date of Birth:").grid(row=3, column=0, sticky=tk.W)
-        self.dob_entry = DateEntry(patient_frame, width=12, background='darkblue', foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd')
-        self.dob_entry.grid(row=3, column=1, sticky=(tk.W, tk.E))
+        self.dob_entry = DateEntry(patient_frame, width=12, background='#4a7abc', foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd')
+        self.dob_entry.grid(row=3, column=1, sticky=(tk.W, tk.E), pady=5)
         self.dob_entry.bind("<<DateEntrySelected>>", self.calculate_age)
 
-        ttk.Label(patient_frame, text="Age:").grid(row=4, column=0, sticky=tk.W)
         self.age_var = tk.StringVar()
-        ttk.Label(patient_frame, textvariable=self.age_var).grid(row=4, column=1, sticky=(tk.W, tk.E))
+        ttk.Label(patient_frame, textvariable=self.age_var).grid(row=4, column=1, sticky=(tk.W, tk.E), pady=5)
 
-        ttk.Label(patient_frame, text="Address:").grid(row=5, column=0, sticky=tk.W)
         self.address_entry = ttk.Entry(patient_frame)
-        self.address_entry.grid(row=5, column=1, sticky=(tk.W, tk.E))
+        self.address_entry.grid(row=5, column=1, sticky=(tk.W, tk.E), pady=5)
 
-        ttk.Label(patient_frame, text="Medical History:").grid(row=6, column=0, sticky=tk.W)
         self.history_entry = ttk.Entry(patient_frame)
-        self.history_entry.grid(row=6, column=1, sticky=(tk.W, tk.E))
+        self.history_entry.grid(row=6, column=1, sticky=(tk.W, tk.E), pady=5)
+
+        # Tests and Results Frame
+        tests_results_frame = ttk.Frame(main_frame, style='TFrame')
+        tests_results_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(10, 0), pady=(0, 20))
+        tests_results_frame.columnconfigure(0, weight=1)
+        tests_results_frame.rowconfigure(1, weight=1)
 
         # Tests Frame
-        tests_frame = ttk.LabelFrame(main_frame, text="Tests", padding="10")
-        tests_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
+        tests_frame = ttk.LabelFrame(tests_results_frame, text="Tests", padding="20", style='TLabelframe')
+        tests_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        tests_frame.columnconfigure(0, weight=1)
+        tests_frame.rowconfigure(0, weight=1)
 
-        self.tests_listbox = tk.Listbox(tests_frame, selectmode=tk.MULTIPLE)
-        self.tests_listbox.pack(fill=tk.BOTH, expand=True)
+        self.tests_listbox = tk.Listbox(tests_frame, selectmode=tk.MULTIPLE, background='white', selectbackground='#4a7abc')
+        self.tests_listbox.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         self.load_tests()
 
         # Results Frame
-        results_frame = ttk.LabelFrame(main_frame, text="Test Results", padding="10")
-        results_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
+        results_frame = ttk.LabelFrame(tests_results_frame, text="Test Results", padding="20", style='TLabelframe')
+        results_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
+        results_frame.columnconfigure(0, weight=1)
+        results_frame.rowconfigure(0, weight=1)
 
-        self.results_text = tk.Text(results_frame, height=10, width=40)
-        self.results_text.pack(fill=tk.BOTH, expand=True)
+        self.results_text = tk.Text(results_frame, height=10, width=40, background='white')
+        self.results_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
         # Buttons
-        button_frame = ttk.Frame(main_frame, padding="10")
-        button_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E))
+        button_frame = ttk.Frame(main_frame, style='TFrame')
+        button_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(20, 0))
+        button_frame.columnconfigure(0, weight=1)
+        button_frame.columnconfigure(1, weight=1)
+        button_frame.columnconfigure(2, weight=1)
+        button_frame.columnconfigure(3, weight=1)
 
-        ttk.Button(button_frame, text="Add Patient", command=self.add_patient).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Modify Patient", command=self.modify_patient).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="View Patient", command=self.view_patient).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Print Info", command=self.print_info).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Logout", command=self.logout_callback).pack(side=tk.RIGHT, padx=5)
+        buttons = [
+            ("Add Patient", self.add_patient),
+            ("Modify Patient", self.modify_patient),
+            ("View Patient", self.view_patient),
+            ("Print Info", self.print_info)
+        ]
+
+        for i, (text, command) in enumerate(buttons):
+            ttk.Button(button_frame, text=text, command=command).grid(row=0, column=i, padx=5, sticky=(tk.W, tk.E))
 
     def calculate_age(self, event=None):
         birth_date = self.dob_entry.get_date()

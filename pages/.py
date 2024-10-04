@@ -1,289 +1,332 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog
+from tkinter import ttk, messagebox
+from tkcalendar import DateEntry
+from datetime import date
+import tempfile
+import os
 
-class AdminPage(tk.Frame):
-    def __init__(self, master, db, user_id, username, password, logout_callback):
+class UserPage(ttk.Frame):
+    def __init__(self, master, db, user_id, logout_callback):
         super().__init__(master)
         self.db = db
         self.user_id = user_id
-        self.username = username
-        self.password = password
         self.logout_callback = logout_callback
 
         self.style = ttk.Style()
         self.style.theme_use('clam')
-        self.style.configure('.', font=('Ubuntu', 12))
+        
+        # Configure colors
+        self.style.configure('.', font=('Helvetica', 12))
+        self.style.configure('TFrame', background='#f0f0f0')
+        self.style.configure('TLabelframe', background='#f0f0f0')
+        self.style.configure('TLabel', background='#f0f0f0')
+        self.style.configure('TButton', background='#4a7abc', foreground='white')
+        self.style.map('TButton', background=[('active', '#3a5a8c')])
+        self.style.configure('Header.TLabel', font=('Helvetica', 16, 'bold'), foreground='#2c3e50')
 
         self.create_widgets()
 
     def create_widgets(self):
-        # Main frame
-        main_frame = ttk.Frame(self, padding="10")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.configure(style='TFrame')
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
-        # Admin Profile Frame
-        self.admin_frame = self.create_admin_profile_frame(main_frame)
-        self.admin_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10)
-
-        # User Management Frame
-        self.user_frame = self.create_user_management_frame(main_frame)
-        self.user_frame.grid(row=1, column=0, sticky=(tk.N, tk.S, tk.W, tk.E), padx=(0, 5), pady=10)
-
-        # Test Management Frame
-        self.test_frame = self.create_test_management_frame(main_frame)
-        self.test_frame.grid(row=1, column=1, sticky=(tk.N, tk.S, tk.W, tk.E), padx=(5, 0), pady=10)
-
-        # Patient Management Frame
-        self.patient_frame = self.create_patient_management_frame(main_frame)
-        self.patient_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
-
-        # Configure grid weights
+        main_frame = ttk.Frame(self, padding="20", style='TFrame')
+        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         main_frame.columnconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(1, weight=1)
-        main_frame.rowconfigure(2, weight=2)
 
-    def create_admin_profile_frame(self, parent):
-        admin_frame = ttk.LabelFrame(parent, text="Admin Profile", padding="10")
-        ttk.Label(admin_frame, text=f"Admin Name: {self.username}").pack(anchor=tk.W)
-        ttk.Label(admin_frame, text="Other Details").pack(anchor=tk.W)
-        ttk.Button(admin_frame, text="Logout", command=self.logout_callback).pack(anchor=tk.E, pady=5)
-        return admin_frame
+        # Header
+        header_frame = ttk.Frame(main_frame, style='TFrame')
+        header_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 20))
+        ttk.Label(header_frame, text="Patient Management System", style='Header.TLabel').pack(side=tk.LEFT)
+        ttk.Button(header_frame, text="Logout", command=self.logout_callback).pack(side=tk.RIGHT)
 
-    def create_user_management_frame(self, parent):
-        user_frame = ttk.LabelFrame(parent, text="User Management", padding="10")
-        
-        self.user_listbox = tk.Listbox(user_frame)
-        self.user_listbox.pack(fill=tk.BOTH, expand=True)
-        self.load_users()
+        # Patient Information Frame
+        patient_frame = ttk.LabelFrame(main_frame, text="Patient Information", padding="20", style='TLabelframe')
+        patient_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 10), pady=(0, 20))
+        patient_frame.columnconfigure(1, weight=1)
 
-        user_buttons = ttk.Frame(user_frame)
-        user_buttons.pack(fill=tk.X, pady=5)
-        ttk.Button(user_buttons, text="Add User", command=self.add_user).pack(side=tk.LEFT, padx=5)
-        ttk.Button(user_buttons, text="Modify User", command=self.modify_user).pack(side=tk.LEFT, padx=5)
-        ttk.Button(user_buttons, text="Delete User", command=self.delete_user).pack(side=tk.LEFT, padx=5)
+        labels = ["Phone Number:", "Full Name:", "Gender:", "Date of Birth:", "Age:", "Address:", "Medical History:"]
+        for i, label in enumerate(labels):
+            ttk.Label(patient_frame, text=label).grid(row=i, column=0, sticky=tk.W, pady=5)
 
-        return user_frame
+        self.phone_entry = ttk.Entry(patient_frame)
+        self.phone_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=5)
 
-    def create_test_management_frame(self, parent):
-        test_frame = ttk.LabelFrame(parent, text="Test Management", padding="10")
+        self.name_entry = ttk.Entry(patient_frame)
+        self.name_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=5)
 
-        self.test_listbox = tk.Listbox(test_frame)
-        self.test_listbox.pack(fill=tk.BOTH, expand=True)
+        gender_frame = ttk.Frame(patient_frame, style='TFrame')
+        gender_frame.grid(row=2, column=1, sticky=(tk.W, tk.E), pady=5)
+        self.gender_var = tk.StringVar()
+        ttk.Radiobutton(gender_frame, text="Male", variable=self.gender_var, value="Male").pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Radiobutton(gender_frame, text="Female", variable=self.gender_var, value="Female").pack(side=tk.LEFT)
+
+        self.dob_entry = DateEntry(patient_frame, width=12, background='#4a7abc', foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd')
+        self.dob_entry.grid(row=3, column=1, sticky=(tk.W, tk.E), pady=5)
+        self.dob_entry.bind("<<DateEntrySelected>>", self.calculate_age)
+
+        self.age_var = tk.StringVar()
+        ttk.Label(patient_frame, textvariable=self.age_var).grid(row=4, column=1, sticky=(tk.W, tk.E), pady=5)
+
+        self.address_entry = ttk.Entry(patient_frame)
+        self.address_entry.grid(row=5, column=1, sticky=(tk.W, tk.E), pady=5)
+
+        self.history_entry = ttk.Entry(patient_frame)
+        self.history_entry.grid(row=6, column=1, sticky=(tk.W, tk.E), pady=5)
+
+        # Tests and Results Frame
+        tests_results_frame = ttk.Frame(main_frame, style='TFrame')
+        tests_results_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(10, 0), pady=(0, 20))
+        tests_results_frame.columnconfigure(0, weight=1)
+        tests_results_frame.rowconfigure(1, weight=1)
+
+        # Tests Frame
+        tests_frame = ttk.LabelFrame(tests_results_frame, text="Tests", padding="20", style='TLabelframe')
+        tests_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        tests_frame.columnconfigure(0, weight=1)
+        tests_frame.rowconfigure(0, weight=1)
+
+        self.tests_listbox = tk.Listbox(tests_frame, selectmode=tk.MULTIPLE, background='white', selectbackground='#4a7abc')
+        self.tests_listbox.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         self.load_tests()
 
-        test_buttons = ttk.Frame(test_frame)
-        test_buttons.pack(fill=tk.X, pady=5)
-        ttk.Button(test_buttons, text="Add Test", command=self.add_test).pack(side=tk.LEFT, padx=5)
-        ttk.Button(test_buttons, text="Modify Test", command=self.modify_test).pack(side=tk.LEFT, padx=5)
-        ttk.Button(test_buttons, text="Delete Test", command=self.delete_test).pack(side=tk.LEFT, padx=5)
+        # Results Frame
+        results_frame = ttk.LabelFrame(tests_results_frame, text="Test Results", padding="20", style='TLabelframe')
+        results_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
+        results_frame.columnconfigure(0, weight=1)
+        results_frame.rowconfigure(0, weight=1)
 
-        return test_frame
+        self.results_text = tk.Text(results_frame, height=10, width=40, background='white')
+        self.results_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-    def create_patient_management_frame(self, parent):
-        patient_frame = ttk.LabelFrame(parent, text="Patient Management", padding="10")
+        # Buttons
+        button_frame = ttk.Frame(main_frame, style='TFrame')
+        button_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(20, 0))
+        button_frame.columnconfigure(0, weight=1)
+        button_frame.columnconfigure(1, weight=1)
+        button_frame.columnconfigure(2, weight=1)
+        button_frame.columnconfigure(3, weight=1)
 
-        self.patient_listbox = tk.Listbox(patient_frame)
-        self.patient_listbox.pack(fill=tk.BOTH, expand=True)
-        self.load_patients()
+        buttons = [
+            ("Add Patient", self.add_patient),
+            ("Modify Patient", self.modify_patient),
+            ("View Patient", self.view_patient),
+            ("Print Info", self.print_info)
+        ]
 
-        patient_buttons = ttk.Frame(patient_frame)
-        patient_buttons.pack(fill=tk.X, pady=5)
-        ttk.Button(patient_buttons, text="View Patient", command=self.view_patient).pack(side=tk.LEFT, padx=5)
-        ttk.Button(patient_buttons, text="Delete Patient", command=self.delete_patient).pack(side=tk.LEFT, padx=5)
+        for i, (text, command) in enumerate(buttons):
+            ttk.Button(button_frame, text=text, command=command).grid(row=0, column=i, padx=5, sticky=(tk.W, tk.E))
 
-        return patient_frame
-
-    def load_users(self):
-        # Clear the listbox
-        self.user_listbox.delete(0, tk.END)
-        
-        # Verify if the current user is an admin
-        cursor = self.db.cursor()
-        cursor.execute("SELECT is_admin FROM users WHERE username = %s", (self.username,))
-        is_admin = cursor.fetchone()
-
-        if is_admin and is_admin[0]:  # Only if the current user is an admin
-            try:
-                # Load all users (not filtered by username/password)
-                cursor.execute("SELECT user_id, username, is_admin FROM users")
-                for user in cursor.fetchall():
-                    user_type = "Admin" if user[2] else "User"
-                    self.user_listbox.insert(tk.END, f"{user[0]}: {user[1]} ({user_type})")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to load users: {str(e)}")
-            finally:
-                cursor.close()
-        else:
-            messagebox.showerror("Error", "You are not authorized to view this information.")
-
-    def add_user(self):
-        username = simpledialog.askstring("Add User", "Enter username:")
-        if username:
-            password = simpledialog.askstring("Add User", "Enter password:", show='*')
-            if password:
-                is_admin = messagebox.askyesno("Add User", "Is this user an admin?")
-                cursor = self.db.cursor()
-                try:
-                    cursor.execute("INSERT INTO users (username, password, is_admin) VALUES (%s, %s, %s)",
-                                   (username, password, is_admin))
-                    self.db.commit()
-                    messagebox.showinfo("Success", "User added successfully")
-                    self.load_users()
-                except Exception as e:
-                    messagebox.showerror("Error", f"Failed to add user: {str(e)}")
-                finally:
-                    cursor.close()
-
-    def modify_user(self):
-        selection = self.user_listbox.curselection()
-        if selection:
-            user_id = int(self.user_listbox.get(selection[0]).split(':')[0])
-            new_username = simpledialog.askstring("Modify User", "Enter new username (or leave blank):")
-            new_password = simpledialog.askstring("Modify User", "Enter new password (or leave blank):", show='*')
-            is_admin = messagebox.askyesno("Modify User", "Is this user an admin?")
-
-            update_fields = []
-            values = []
-            if new_username:
-                update_fields.append("username = %s")
-                values.append(new_username)
-            if new_password:
-                update_fields.append("password = %s")
-                values.append(new_password)
-            update_fields.append("is_admin = %s")
-            values.append(is_admin)
-            values.append(user_id)
-
-            cursor = self.db.cursor()
-            try:
-                cursor.execute(f"UPDATE users SET {', '.join(update_fields)} WHERE user_id = %s", tuple(values))
-                self.db.commit()
-                messagebox.showinfo("Success", "User modified successfully")
-                self.load_users()
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to modify user: {str(e)}")
-            finally:
-                cursor.close()
-
-    def delete_user(self):
-        selection = self.user_listbox.curselection()
-        if selection:
-            user_id = int(self.user_listbox.get(selection[0]).split(':')[0])
-            if messagebox.askyesno("Delete User", "Are you sure you want to delete this user?"):
-                cursor = self.db.cursor()
-                try:
-                    cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
-                    self.db.commit()
-                    messagebox.showinfo("Success", "User deleted successfully")
-                    self.load_users()
-                except Exception as e:
-                    messagebox.showerror("Error", f"Failed to delete user: {str(e)}")
-                finally:
-                    cursor.close()
+    def calculate_age(self, event=None):
+        birth_date = self.dob_entry.get_date()
+        today = date.today()
+        age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+        self.age_var.set(str(age))
 
     def load_tests(self):
-        self.test_listbox.delete(0, tk.END)
         cursor = self.db.cursor()
-        cursor.execute("SELECT test_id, test_name FROM tests")
+        cursor.execute("SELECT test_name FROM tests")
         for test in cursor.fetchall():
-            self.test_listbox.insert(tk.END, f"{test[0]}: {test[1]}")
+            self.tests_listbox.insert(tk.END, test[0])
         cursor.close()
 
-    def add_test(self):
-        test_name = simpledialog.askstring("Add Test", "Enter test name:")
-        if test_name:
-            cursor = self.db.cursor()
-            try:
-                cursor.execute("INSERT INTO tests (test_name) VALUES (%s)", (test_name,))
-                self.db.commit()
-                messagebox.showinfo("Success", "Test added successfully")
-                self.load_tests()
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to add test: {str(e)}")
-            finally:
-                cursor.close()
+    def add_patient(self):
+        # Gather patient information
+        phone = self.phone_entry.get()
+        name = self.name_entry.get()
+        gender = self.gender_var.get()
+        dob = self.dob_entry.get_date()
+        age = self.age_var.get()
+        address = self.address_entry.get()
+        history = self.history_entry.get()
 
-    def modify_test(self):
-        selection = self.test_listbox.curselection()
-        if selection:
-            test_id = int(self.test_listbox.get(selection[0]).split(':')[0])
-            new_test_name = simpledialog.askstring("Modify Test", "Enter new test name:")
-            if new_test_name:
-                cursor = self.db.cursor()
-                try:
-                    cursor.execute("UPDATE tests SET test_name = %s WHERE test_id = %s", (new_test_name, test_id))
-                    self.db.commit()
-                    messagebox.showinfo("Success", "Test modified successfully")
-                    self.load_tests()
-                except Exception as e:
-                    messagebox.showerror("Error", f"Failed to modify test: {str(e)}")
-                finally:
-                    cursor.close()
+        # Validate input
+        if not all([phone, name, gender, dob, age, address]):
+            messagebox.showerror("Error", "All fields except Medical History are required.")
+            return
 
-    def delete_test(self):
-        selection = self.test_listbox.curselection()
-        if selection:
-            test_id = int(self.test_listbox.get(selection[0]).split(':')[0])
-            if messagebox.askyesno("Delete Test", "Are you sure you want to delete this test?"):
-                cursor = self.db.cursor()
-                try:
-                    cursor.execute("DELETE FROM tests WHERE test_id = %s", (test_id,))
-                    self.db.commit()
-                    messagebox.showinfo("Success", "Test deleted successfully")
-                    self.load_tests()
-                except Exception as e:
-                    messagebox.showerror("Error", f"Failed to delete test: {str(e)}")
-                finally:
-                    cursor.close()
-
-    def load_patients(self):
-        self.patient_listbox.delete(0, tk.END)
+        # Insert patient into database
         cursor = self.db.cursor()
-        cursor.execute("SELECT patient_id, full_name FROM patients")
-        for patient in cursor.fetchall():
-            self.patient_listbox.insert(tk.END, f"{patient[0]}: {patient[1]}")
-        cursor.close()
+        try:
+            cursor.execute("""
+                INSERT INTO patients (phone_number, full_name, gender, dob, age, address, medical_history)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (phone, name, gender, dob, age, address, history))
+            
+            patient_id = cursor.lastrowid
+
+            # Add selected tests
+            selected_tests = [self.tests_listbox.get(i) for i in self.tests_listbox.curselection()]
+            for test in selected_tests:
+                cursor.execute("SELECT test_id FROM tests WHERE test_name = %s", (test,))
+                test_id = cursor.fetchone()[0]
+                cursor.execute("INSERT INTO tests (patient_id, test_id) VALUES (%s, %s)", (patient_id, test_id))
+
+            self.db.commit()
+            messagebox.showinfo("Success", "Patient added successfully")
+            self.clear_fields()
+        except Exception as e:
+            self.db.rollback()
+            messagebox.showerror("Error", f"Failed to add patient: {str(e)}")
+        finally:
+            cursor.close()
+
+    def modify_patient(self):
+        # Get patient phone number
+        phone = self.phone_entry.get()
+        if not phone:
+            messagebox.showerror("Error", "Please enter a phone number to modify a patient.")
+            return
+
+        # Fetch patient data
+        cursor = self.db.cursor()
+        cursor.execute("SELECT * FROM patients WHERE phone_number = %s", (phone,))
+        patient = cursor.fetchone()
+
+        if not patient:
+            messagebox.showerror("Error", "Patient not found.")
+            return
+
+        # Update patient information
+        name = self.name_entry.get()
+        gender = self.gender_var.get()
+        dob = self.dob_entry.get_date()
+        age = self.age_var.get()
+        address = self.address_entry.get()
+        history = self.history_entry.get()
+
+        try:
+            cursor.execute("""
+                UPDATE patients 
+                SET full_name = %s, gender = %s, dob = %s, age = %s, address = %s, medical_history = %s
+                WHERE phone_number = %s
+            """, (name, gender, dob, age, address, history, phone))
+
+            # Update tests
+            cursor.execute("DELETE FROM tests WHERE patient_id = %s", (patient[0],))
+            selected_tests = [self.tests_listbox.get(i) for i in self.tests_listbox.curselection()]
+            for test in selected_tests:
+                cursor.execute("SELECT test_id FROM tests WHERE test_name = %s", (test,))
+                test_id = cursor.fetchone()[0]
+                cursor.execute("INSERT INTO tests (patient_id, test_id) VALUES (%s, %s)", (patient[0], test_id))
+
+            self.db.commit()
+            messagebox.showinfo("Success", "Patient information updated successfully")
+        except Exception as e:
+            self.db.rollback()
+            messagebox.showerror("Error", f"Failed to update patient: {str(e)}")
+        finally:
+            cursor.close()
 
     def view_patient(self):
-        selection = self.patient_listbox.curselection()
-        if selection:
-            patient_id = int(self.patient_listbox.get(selection[0]).split(':')[0])
-            cursor = self.db.cursor()
-            try:
-                cursor.execute("SELECT * FROM patients WHERE patient_id = %s", (patient_id,))
-                patient = cursor.fetchone()
-                if patient:
-                    info = f"Patient_ID: {patient[0]}\n"
-                    info += f"Name: {patient[1]}\n"
-                    info += f"Phone: {patient[2]}\n"
-                    info += f"Gender: {patient[3]}\n"
-                    info += f"DOB: {patient[4]}\n"
-                    info += f"Age: {patient[5]}\n"
-                    info += f"Address: {patient[6]}\n"
-                    info += f"Medical History: {patient[7]}"
-                    messagebox.showinfo("Patient Information", info)
-                else:
-                    messagebox.showinfo("Not Found", "Patient not found")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to view patient: {str(e)}")
-            finally:
-                cursor.close()
+        # Get patient phone number
+        phone = self.phone_entry.get()
+        if not phone:
+            messagebox.showerror("Error", "Please enter a phone number to view a patient.")
+            return
 
-    def delete_patient(self):
-        selection = self.patient_listbox.curselection()
-        if selection:
-            patient_id = int(self.patient_listbox.get(selection[0]).split(':')[0])
-            if messagebox.askyesno("Delete Patient", "Are you sure you want to delete this patient?"):
-                cursor = self.db.cursor()
-                try:
-                    cursor.execute("DELETE FROM patients WHERE patient_id = %s", (patient_id,))
-                    self.db.commit()
-                    messagebox.showinfo("Success", "Patient deleted successfully")
-                    self.load_patients()
-                except Exception as e:
-                    messagebox.showerror("Error", f"Failed to delete patient: {str(e)}")
-                finally:
-                    cursor.close()
+        # Fetch patient data
+        cursor = self.db.cursor()
+        try:
+            cursor.execute("SELECT * FROM patients WHERE phone_number = %s", (phone,))
+            patient = cursor.fetchone()
+
+            if not patient:
+                messagebox.showerror("Error", "Patient not found.")
+                return
+
+            # Populate fields with patient data
+            self.name_entry.delete(0, tk.END)
+            self.name_entry.insert(0, patient[2]) 
+            self.gender_var.set(patient[3])  
+            self.dob_entry.set_date(patient[4])  
+            self.age_var.set(patient[5])  
+            self.address_entry.delete(0, tk.END)
+            self.address_entry.insert(0, patient[6]) 
+            self.history_entry.delete(0, tk.END)
+            self.history_entry.insert(0, patient[7]) 
+
+            # Fetch and select patient's tests
+            cursor.execute("""
+                SELECT t.test_name 
+                FROM tests pt
+                JOIN tests t ON pt.test_id = t.id
+                WHERE pt.patient_id = %s
+            """, (patient[0],))
+            tests = [test[0] for test in cursor.fetchall()]
+            
+            self.tests_listbox.selection_clear(0, tk.END)
+            for i in range(self.tests_listbox.size()):
+                if self.tests_listbox.get(i) in tests:
+                    self.tests_listbox.selection_set(i)
+
+            messagebox.showinfo("Success", "Patient information loaded successfully")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load patient: {str(e)}")
+        finally:
+            cursor.close()
+
+    def print_info(self):
+        # Get patient phone number
+        phone = self.phone_entry.get()
+        if not phone:
+            messagebox.showerror("Error", "Please enter a phone number to print patient information.")
+            return
+
+        # Fetch patient data
+        cursor = self.db.cursor()
+        try:
+            cursor.execute("SELECT * FROM patients WHERE phone_number = %s", (phone,))
+            patient = cursor.fetchone()
+
+            if not patient:
+                messagebox.showerror("Error", "Patient not found.")
+                return
+
+            # Fetch patient's tests
+            cursor.execute("""
+                SELECT t.test_name 
+                FROM tests pt
+                JOIN tests t ON pt.test_id = t.id
+                WHERE pt.patient_id = %s
+            """, (patient[0],))
+            tests = [test[0] for test in cursor.fetchall()]
+
+            # Create a temporary file to store patient information
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as temp_file:
+                temp_file.write(f"Patient Information:\n")
+                temp_file.write(f"Name: {patient[2]}\n")
+                temp_file.write(f"Phone: {patient[1]}\n")
+                temp_file.write(f"Gender: {patient[3]}\n")
+                temp_file.write(f"Date of Birth: {patient[4]}\n")
+                temp_file.write(f"Age: {patient[5]}\n")
+                temp_file.write(f"Address: {patient[6]}\n")
+                temp_file.write(f"Medical History: {patient[7]}\n")
+                temp_file.write(f"\nTests:\n")
+                for test in tests:
+                    temp_file.write(f"- {test}\n")
+
+            # Open the file with the default text editor
+            os.startfile(temp_file.name)
+
+            messagebox.showinfo("Success", "Patient information has been prepared for printing.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to print patient information: {str(e)}")
+        finally:
+            cursor.close()
+
+    def clear_fields(self):
+        self.phone_entry.delete(0, tk.END)
+        self.name_entry.delete(0, tk.END)
+        self.gender_var.set("")
+        self.dob_entry.set_date(date.today())
+        self.age_var.set("")
+        self.address_entry.delete(0, tk.END)
+        self.history_entry.delete(0, tk.END)
+        self.tests_listbox.selection_clear(0, tk.END)
+        self.results_text.delete('1.0', tk.END)
+    
+    def logout(self):
+        self.logout_callback()

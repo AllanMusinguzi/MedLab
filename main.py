@@ -50,8 +50,9 @@ class MedicalLabSystem:
             self.db = mysql.connector.connect(
                 host="localhost",
                 user="imap",
-                password="@allanp400@PATO",
-                database="medical_labdb"
+                password="44@@44aa00@Allan",
+                database="medical_labdb",
+                port = 3307
             )
             print("Database connection successful!")
             self.master.after(0, self.initialize_app)
