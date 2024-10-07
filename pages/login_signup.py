@@ -21,37 +21,48 @@ class LoginSignup(ttk.Frame):
         self.create_widgets()
 
     def create_widgets(self):
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+
         self.notebook = ttk.Notebook(self, style='Custom.TNotebook')
-        self.notebook.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        self.notebook.grid(row=0, column=0, sticky='nsew', padx=20, pady=20)
 
-        self.login_frame = ttk.Frame(self.notebook, padding="30 30 30 30")
-        self.signup_frame = ttk.Frame(self.notebook, padding="30 30 30 30")
+        self.login_frame = ttk.Frame(self.notebook)
+        self.signup_frame = ttk.Frame(self.notebook)
 
-        self.notebook.add(self.login_frame, text='Login', padding=(10, 5), sticky='nsew')
-        self.notebook.add(self.signup_frame, text='Sign Up', padding=(10, 5), sticky='nsew')
+        self.notebook.add(self.login_frame, text='Login')
+        self.notebook.add(self.signup_frame, text='Sign Up')
 
         self.create_login_form()
         self.create_signup_form()
 
     def create_login_form(self):
-        main_frame = ttk.Frame(self.login_frame)
-        main_frame.pack(expand=True)
+        self.login_frame.columnconfigure(0, weight=1)
+        self.login_frame.rowconfigure(0, weight=1)
+
+        main_frame = ttk.Frame(self.login_frame, padding="30 30 30 30")
+        main_frame.grid(row=0, column=0, sticky='nsew')
+        main_frame.columnconfigure(1, weight=1)
 
         ttk.Label(main_frame, text="Username:").grid(row=0, column=0, sticky=tk.E, pady=10)
-        self.login_username = ttk.Entry(main_frame, width=30)
-        self.login_username.grid(row=0, column=1, pady=10, padx=(10, 0))
+        self.login_username = ttk.Entry(main_frame)
+        self.login_username.grid(row=0, column=1, sticky='ew', pady=10, padx=(10, 0))
 
         ttk.Label(main_frame, text="Password:").grid(row=1, column=0, sticky=tk.E, pady=10)
-        self.login_password = ttk.Entry(main_frame, show="*", width=30)
-        self.login_password.grid(row=1, column=1, pady=10, padx=(10, 0))
+        self.login_password = ttk.Entry(main_frame, show="*")
+        self.login_password.grid(row=1, column=1, sticky='ew', pady=10, padx=(10, 0))
 
         button_frame = ttk.Frame(main_frame)
         button_frame.grid(row=2, column=0, columnspan=2, pady=20)
         ttk.Button(button_frame, text="Login", command=self.login).pack()
 
     def create_signup_form(self):
-        main_frame = ttk.Frame(self.signup_frame)
-        main_frame.pack(expand=True)
+        self.signup_frame.columnconfigure(0, weight=1)
+        self.signup_frame.rowconfigure(0, weight=1)
+
+        main_frame = ttk.Frame(self.signup_frame, padding="30 30 30 30")
+        main_frame.grid(row=0, column=0, sticky='nsew')
+        main_frame.columnconfigure(1, weight=1)
 
         fields = [
             ("Full Name:", "signup_full_name"),
@@ -64,8 +75,8 @@ class LoginSignup(ttk.Frame):
 
         for i, (label, attr) in enumerate(fields):
             ttk.Label(main_frame, text=label).grid(row=i, column=0, sticky=tk.E, pady=8)
-            entry = ttk.Entry(main_frame, width=30)
-            entry.grid(row=i, column=1, pady=8, padx=(10, 0))
+            entry = ttk.Entry(main_frame)
+            entry.grid(row=i, column=1, sticky='ew', pady=8, padx=(10, 0))
             setattr(self, attr, entry)
 
             if "password" in attr:
