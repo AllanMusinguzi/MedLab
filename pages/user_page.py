@@ -2,8 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
 from datetime import date
-import report_generate
-import os
+from report_generate import ReportGenerate
+import subprocess
 
 class UserPage(ttk.Frame):
     def __init__(self, master, db, user_id, logout_callback):
@@ -15,16 +15,13 @@ class UserPage(ttk.Frame):
         self.style = ttk.Style()
         self.style.theme_use('clam')
 
-        tests_results_frame = ttk.Frame(self)
-        tests_results_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        
         self.style.configure('.', font=('Ubuntu', 11))
         self.style.configure('TFrame', background='#f0f0f0')
         self.style.configure('TLabelframe', background='#f0f0f0')
         self.style.configure('TLabel', background='#f0f0f0')
         self.style.configure('TButton', background='#4a7abc', foreground='white')
         self.style.map('TButton', background=[('active', '#3a5a8c')])
-        self.style.configure('Header.TLabel', font=('Ubuntu', 12, 'bold')) #, foreground='#2c3e50'
+        self.style.configure('Header.TLabel', font=('Ubuntu', 12, 'bold'))
 
         self.create_widgets()
 
@@ -37,24 +34,6 @@ class UserPage(ttk.Frame):
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         main_frame.columnconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
-
-        # Buttons
-        button_frame = ttk.Frame(main_frame, style='TFrame')
-        button_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(20, 0))
-        button_frame.columnconfigure(0, weight=1)
-        button_frame.columnconfigure(1, weight=1)
-        button_frame.columnconfigure(2, weight=1)
-        button_frame.columnconfigure(3, weight=1)
-
-        buttons = [
-            ("Add Patient", self.add_patient),
-            ("Modify Patient", self.modify_patient),
-            ("View Patient", self.view_patient),
-            ("Print Info", self.print_info)
-        ]
-
-        for i, (text, command) in enumerate(buttons):
-            ttk.Button(button_frame, text=text, command=command).grid(row=0, column=i, padx=5, sticky=(tk.W, tk.E))
 
         # Header
         header_frame = ttk.Frame(main_frame, style='TFrame')
@@ -96,6 +75,20 @@ class UserPage(ttk.Frame):
         self.history_entry = ttk.Entry(patient_frame)
         self.history_entry.grid(row=6, column=1, sticky=(tk.W, tk.E), pady=5)
 
+        # Patient Table
+        self.patient_table = ttk.Treeview(patient_frame, columns=("Patient ID","Test ID", "Name", "Phone", "Gender", "Age"), show="headings")
+        self.patient_table.grid(row=7, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10)
+        self.patient_table.heading("Patient ID", text="Patient ID")
+        self.patient_table.heading("Test ID", text="Test ID")
+        self.patient_table.heading("Name", text="Name")
+        self.patient_table.heading("Phone", text="Phone")
+        self.patient_table.heading("Gender", text="Gender")
+        self.patient_table.heading("Age", text="Age")
+        self.load_patients()
+
+        # Binding selection event
+        self.patient_table.bind("<<TreeviewSelect>>", self.on_patient_select)
+
         # Tests and Results Frame
         tests_results_frame = ttk.Frame(main_frame, style='TFrame')
         tests_results_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(10, 0), pady=(0, 20))
@@ -108,10 +101,10 @@ class UserPage(ttk.Frame):
         self.tests_frame.rowconfigure(0, weight=1)
 
         # Create a Treeview for tests
-        self.tests_tree = ttk.Treeview(self.tests_frame, columns=("ID", "Name", "Price"), show="headings")
+        self.tests_tree = ttk.Treeview(self.tests_frame, columns=("ID", "Name", "Description"), show="headings")
         self.tests_tree.heading("ID", text="ID")
         self.tests_tree.heading("Name", text="Test Name")
-        self.tests_tree.heading("Price", text="Price")
+        self.tests_tree.heading("Description", text="Description")
         self.tests_tree.grid(row=0, column=0, sticky="nsew")
 
         # Bind the selection event
@@ -119,19 +112,20 @@ class UserPage(ttk.Frame):
 
         self.load_tests()
 
-        # Modify the Results Frame
+        # Results Frame
         self.results_frame = ttk.LabelFrame(tests_results_frame, text="Test Results", padding="10", style='TLabelframe', labelanchor="n")
         self.results_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
-        self.results_frame.columnconfigure(0, weight=1)
         self.results_frame.columnconfigure(1, weight=1)
 
-        ttk.Label(self.results_frame, text="Test ID:").grid(row=0, column=0, sticky="w")
-        self.test_id_var = tk.StringVar()
-        ttk.Entry(self.results_frame, textvariable=self.test_id_var, state="readonly").grid(row=0, column=1, sticky="ew")
-
-        ttk.Label(self.results_frame, text="Patient ID:").grid(row=1, column=0, sticky="w")
+        ttk.Label(self.results_frame, text="Patient ID:").grid(row=0, column=0, sticky="w")
         self.patient_id_var = tk.StringVar()
-        ttk.Entry(self.results_frame, textvariable=self.patient_id_var, state="readonly").grid(row=1, column=1, sticky="ew")
+        self.patient_id_entry = ttk.Entry(self.results_frame, textvariable=self.patient_id_var, state="readonly")
+        self.patient_id_entry.grid(row=0, column=1, sticky="ew")
+
+        ttk.Label(self.results_frame, text="Test ID:").grid(row=1, column=0, sticky="w")
+        self.test_id_var = tk.StringVar()
+        self.test_id_entry = ttk.Entry(self.results_frame, textvariable=self.test_id_var, state="normal")
+        self.test_id_entry.grid(row=1, column=1, sticky="ew")
 
         ttk.Label(self.results_frame, text="Result:").grid(row=2, column=0, sticky="w")
         self.result_var = tk.StringVar(value="Select Result")
@@ -139,11 +133,11 @@ class UserPage(ttk.Frame):
         self.result_combobox.grid(row=2, column=1, sticky="ew")
 
         ttk.Label(self.results_frame, text="Description:").grid(row=3, column=0, sticky="w")
-        self.description_text = tk.Text(self.results_frame, height=5, width=20, background='white')
+        self.description_text = tk.Text(self.results_frame, height=3, width=30)
         self.description_text.grid(row=3, column=1, sticky="ew")
 
         ttk.Label(self.results_frame, text="Date of Test:").grid(row=4, column=0, sticky="w")
-        self.date_entry = DateEntry(self.results_frame, width=17, background='darkblue', foreground='white', borderwidth=2)
+        self.date_entry = DateEntry(self.results_frame, width=12, background='#4a7abc', foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd')
         self.date_entry.grid(row=4, column=1, sticky="ew")
 
         ttk.Label(self.results_frame, text="Doctor/Technician:").grid(row=5, column=0, sticky="w")
@@ -151,23 +145,59 @@ class UserPage(ttk.Frame):
         self.doctor_entry.grid(row=5, column=1, sticky="ew")
 
         ttk.Label(self.results_frame, text="Comments:").grid(row=6, column=0, sticky="w")
-        self.comments_text = tk.Text(self.results_frame, height=5, width=20, background='white')
+        self.comments_text = tk.Text(self.results_frame, height=3, width=30)
         self.comments_text.grid(row=6, column=1, sticky="ew")
 
         ttk.Button(self.results_frame, text="Submit Result", command=self.submit_result).grid(row=7, column=0, columnspan=2, pady=(10, 0))
 
-    def load_tests(self):
-        # Clear existing items
-        for item in self.tests_tree.get_children():
-            self.tests_tree.delete(item)
+        # Buttons
+        button_frame = ttk.Frame(main_frame, style='TFrame')
+        button_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(20, 0))
+        button_frame.columnconfigure(0, weight=1)
+        button_frame.columnconfigure(1, weight=1)
+        button_frame.columnconfigure(2, weight=1)
+        button_frame.columnconfigure(3, weight=1)
 
-        # Fetch tests from the database
+        buttons = [
+            ("Add Patient", self.add_patient),
+            ("Modify Patient", self.modify_patient),
+            ("View Patient", self.view_patient),
+            ("Print Info", self.print_info)
+        ]
+
+        for i, (text, command) in enumerate(buttons):
+            ttk.Button(button_frame, text=text, command=command).grid(row=0, column=i, padx=5, sticky=(tk.W, tk.E))
+
+    def load_patients(self):
         cursor = self.db.cursor()
-        cursor.execute("SELECT id, name, price FROM tests")
+
+        # Modify the query to get patient details and associated tests
+        query = """
+        SELECT p.patient_id, GROUP_CONCAT(pt.test_id) AS test_ids, p.full_name, p.phone_number, p.gender, p.age
+        FROM patients p
+        LEFT JOIN patient_tests pt ON p.patient_id = pt.patient_id
+        GROUP BY p.patient_id
+        """
+        
+        cursor.execute(query)
+        patients = cursor.fetchall()
+        cursor.close()
+
+        # Clear the table before loading new data
+        for patient in self.patient_table.get_children():
+            self.patient_table.delete(patient)
+
+        # Insert fetched patient data into the table (test_ids as concatenated string)
+        for patient in patients:
+            reordered_patient = (patient[0], patient[1] if patient[1] else 'None', patient[2], patient[3], patient[4], patient[5])
+            self.patient_table.insert("", "end", values=reordered_patient)
+
+    def load_tests(self):
+        cursor = self.db.cursor()
+        cursor.execute("SELECT test_id, test_name, description FROM tests")
         tests = cursor.fetchall()
         cursor.close()
 
-        # Insert tests into the Treeview
         for test in tests:
             self.tests_tree.insert("", "end", values=test)
 
@@ -177,63 +207,18 @@ class UserPage(ttk.Frame):
             item = selected_items[0]
             test_id = self.tests_tree.item(item)['values'][0]
             self.test_id_var.set(test_id)
-            
-            # Get the current patient ID (you need to implement this based on your UI structure)
-            current_patient_id = self.get_current_patient_id()
-            self.patient_id_var.set(current_patient_id)
 
-            # Clear previous results
-            self.clear_result_fields()
-
-            # Prompt user to input test results
-            messagebox.showinfo("Input Required", f"Please input the results for Test ID: {test_id}")
-
-    def get_current_patient_id(self):
-        # Implement this method to return the current patient ID
-        # For now, we'll return a placeholder value
-        return self.patient_id_entry.get()  # Assuming phone number is used as patient ID
-
-    def clear_result_fields(self):
-        self.result_var.set("Select Result")
-        self.description_text.delete("1.0", tk.END)
-        self.date_entry.set_date(date.today())
-        self.doctor_entry.delete(0, tk.END)
-        self.comments_text.delete("1.0", tk.END)
-
-    def submit_result(self):
-        # Gather result information
-        test_id = self.test_id_var.get()
-        patient_id = self.patient_id_var.get()
-        result = self.result_var.get()
-        description = self.description_text.get("1.0", tk.END).strip()
-        test_date = self.date_entry.get_date()
-        doctor_technician = self.doctor_entry.get()
-        comments = self.comments_text.get("1.0", tk.END).strip()
-
-        # Validate result information
-        if not all([test_id, patient_id, result, description, test_date, doctor_technician]):
-            messagebox.showerror("Error", "All fields except Comments are required.")
-            return
-
-        cursor = self.db.cursor()
-        try:
-            # Insert results into 'results' table
-            cursor.execute("""
-                INSERT INTO results (patient_id, test_id, result, description, test_date, doctor_technician, comments)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (patient_id, test_id, result, description, test_date, doctor_technician, comments))
-
-            # Commit the changes to the database
-            self.db.commit()
-            messagebox.showinfo("Success", "Test result submitted successfully.")
-            self.clear_result_fields()
-        except Exception as e:
-            # Rollback the transaction if an error occurs
-            self.db.rollback()
-            messagebox.showerror("Error", f"Failed to submit test result: {str(e)}")
-            print(f"Error details: {e}")  # Log the error for debugging
-        finally:
-            cursor.close()
+        # Define the on_patient_select method
+    def on_patient_select(self, event):
+            # Get the selected item
+        selected_item = self.patient_table.selection()
+        if selected_item:
+                # Fetch the values from the selected row
+            patient_data = self.patient_table.item(selected_item)['values']
+            if patient_data:
+                    # Set Patient ID and Test ID in the results frame
+                self.patient_id_var.set(patient_data[0])  # Patient ID is the first column
+                self.test_id_var.set(patient_data[1] if patient_data[1] else '')  # Test ID is the second column
 
     def calculate_age(self, event=None):
         birth_date = self.dob_entry.get_date()
@@ -241,47 +226,7 @@ class UserPage(ttk.Frame):
         age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
         self.age_var.set(str(age))
 
-    def load_tests(self):
-        # Create Treeview widget inside the tests_frame
-        self.tree = ttk.Treeview(self.tests_frame, columns=("Test ID", "Test Name", "Description"), show="headings")
-        
-        # Define headings
-        self.tree.heading("Test ID", text="Test ID")
-        self.tree.heading("Test Name", text="Test Name")
-        self.tree.heading("Description", text="Description")
-
-        # Set column widths (optional)
-        self.tree.column("Test ID", width=50)
-        self.tree.column("Test Name", width=100)
-        self.tree.column("Description", width=300)
-
-        # Add Treeview to the grid inside the tests_frame
-        self.tree.grid(row=0, column=0, sticky="nsew")
-
-        # Enable scrolling if needed
-        scrollbar = ttk.Scrollbar(self.tests_frame, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscroll=scrollbar.set)
-        scrollbar.grid(row=0, column=1, sticky="ns")
-
-        # Load data from the database
-        cursor = self.db.cursor()
-        cursor.execute("SELECT test_id, test_name, description FROM tests")
-
-        # Insert data into the Treeview
-        for test in cursor.fetchall():
-            self.tree.insert("", tk.END, values=(test[0], test[1], test[2]))
-
-        cursor.close()
-
-        self.result_var = tk.StringVar()
-        self.result_value_entry = tk.Entry(self)
-        self.description_entry = tk.Entry(self)
-        self.date_picker = DateEntry(self)  # Date picker widget
-        self.doctor_entry = tk.Entry(self)
-        self.comments_entry = tk.Entry(self)        
-
     def add_patient(self):
-        # Gather patient information
         phone = self.phone_entry.get()
         name = self.name_entry.get()
         gender = self.gender_var.get()
@@ -290,67 +235,45 @@ class UserPage(ttk.Frame):
         address = self.address_entry.get()
         history = self.history_entry.get()
 
-        # Validate patient information
         if not all([phone, name, gender, dob, age, address]):
             messagebox.showerror("Error", "All fields except Medical History are required.")
             return
 
-        # Validate that at least one test is selected
-        selected_items = self.tree.selection()
+        selected_items = self.tests_tree.selection()
         if not selected_items:
             messagebox.showerror("Error", "Please select at least one test.")
             return
 
         cursor = self.db.cursor()
         try:
-            # Insert patient information into 'patients' table
             cursor.execute("""
                 INSERT INTO patients (phone_number, full_name, gender, dob, age, address, medical_history)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (phone, name, gender, dob, age, address, history))
 
-            # Get the last inserted patient_id
             patient_id = cursor.lastrowid
 
-            # Loop through each selected test and insert into 'patient_tests' table
             for item in selected_items:
-                test_id = self.tree.item(item)['values'][0]  # Get test ID from selected test
-                
-                # Insert the selected test into 'patient_tests' table
+                test_id = self.tests_tree.item(item)['values'][0]
                 cursor.execute("INSERT INTO patient_tests (patient_id, test_id) VALUES (%s, %s)", (patient_id, test_id))
 
-            # Commit all changes to the database
             self.db.commit()
-            
-            # Display patient_id and test_id in the results frame (assumed to have corresponding entry fields)
-            self.patient_id_entry.delete(0, tk.END)
-            self.patient_id_entry.insert(0, patient_id)
-
-            # Assuming the first selected test is the one to display in results frame
-            self.test_id_entry.delete(0, tk.END)
-            self.test_id_entry.insert(0, test_id)
-
+            self.patient_table.insert("", "end", values=(patient_id, name, phone, gender, age))
             messagebox.showinfo("Success", "Patient and tests added successfully.")
             self.clear_fields()
-
         except Exception as e:
-            # Rollback the transaction if an error occurs and provide more detailed error context
             self.db.rollback()
             messagebox.showerror("Error", f"Failed to add patient or tests: {str(e)}")
-            raise
-
         finally:
             cursor.close()
 
 
     def modify_patient(self):
-        # Get patient phone number
         phone = self.phone_entry.get()
         if not phone:
             messagebox.showerror("Error", "Please enter a phone number to modify a patient.")
             return
 
-        # Fetch patient data
         cursor = self.db.cursor()
         cursor.execute("SELECT * FROM patients WHERE phone_number = %s", (phone,))
         patient = cursor.fetchone()
@@ -359,13 +282,17 @@ class UserPage(ttk.Frame):
             messagebox.showerror("Error", "Patient not found.")
             return
 
-        # Update patient information
         name = self.name_entry.get()
         gender = self.gender_var.get()
         dob = self.dob_entry.get_date()
         age = self.age_var.get()
         address = self.address_entry.get()
         history = self.history_entry.get()
+
+        selected_items = self.tests_tree.selection([0])
+        if not selected_items:
+            messagebox.showerror("Error", "Please select at least one test.")
+            return
 
         try:
             cursor.execute("""
@@ -375,31 +302,27 @@ class UserPage(ttk.Frame):
             """, (name, gender, dob, age, address, history, phone))
 
             # Update tests
-            # First, delete existing tests for the patient
             cursor.execute("DELETE FROM patient_tests WHERE patient_id = %s", (patient[0],))
 
-            # Then, add selected tests
-            selected_items = self.tree.selection()  
             for item in selected_items:
-                test_id = self.tree.item(item)['values'][0]  # Assuming test ID is in the first column
+                test_id = self.tests_tree.item(item)['values'][0]
                 cursor.execute("INSERT INTO patient_tests (patient_id, test_id) VALUES (%s, %s)", (patient[0], test_id))
 
             self.db.commit()
+            self.update_patient_table()
             messagebox.showinfo("Success", "Patient information updated successfully")
         except Exception as e:
             self.db.rollback()
             messagebox.showerror("Error", f"Failed to update patient: {str(e)}")
         finally:
-            cursor.close()              
+            cursor.close()
 
     def view_patient(self):
-        # Get patient phone number
         phone = self.phone_entry.get()
         if not phone:
             messagebox.showerror("Error", "Please enter a phone number to view a patient.")
             return
 
-        # Fetch patient data
         cursor = self.db.cursor()
         try:
             cursor.execute("SELECT * FROM patients WHERE phone_number = %s", (phone,))
@@ -409,50 +332,31 @@ class UserPage(ttk.Frame):
                 messagebox.showerror("Error", "Patient not found.")
                 return
 
-            # Create a popup dialog
-            popup = tk.Toplevel(self.master)
-            popup.title("Patient Information")
-
-            # Create a Treeview to display patient information
-            tree = ttk.Treeview(popup, columns=("Attribute", "Value"), show="headings")
-            tree.heading("Attribute", text="Attribute")
-            tree.heading("Value", text="Value")
-            tree.column("Attribute", anchor="w")
-            tree.column("Value", anchor="w")
-
-            # Insert patient data into the Treeview
-            patient_data = [
-                ("Patient ID", patient[0]),
-                ("Name", patient[2]),
-                ("Gender", patient[3]),
-                ("Date of Birth", patient[4]),
-                ("Contact", patient[1]),
-                ("Age", patient[5]),
-                ("Address", patient[6]),
-                ("History", patient[7])
-            ]
-
-            for item in patient_data:
-                tree.insert("", tk.END, values=item)
+            self.patient_id_var.set(patient[0])
+            self.name_entry.delete(0, tk.END)
+            self.name_entry.insert(0, patient[2])
+            self.gender_var.set(patient[3])
+            self.dob_entry.set_date(patient[4])
+            self.age_var.set(patient[5])
+            self.address_entry.delete(0, tk.END)
+            self.address_entry.insert(0, patient[6])
+            self.history_entry.delete(0, tk.END)
+            self.history_entry.insert(0, patient[7])
 
             # Fetch and display patient's tests
             cursor.execute("""
-                SELECT t.test_name 
+                SELECT t.test_id 
                 FROM patient_tests pt
                 JOIN tests t ON pt.test_id = t.test_id
                 WHERE pt.patient_id = %s
             """, (patient[0],))
             tests = [test[0] for test in cursor.fetchall()]
 
-            # Display tests in the same table
-            if tests:
-                tree.insert("", tk.END, values=("Tests", ", ".join(tests)))
-
-            tree.pack(padx=10, pady=10)
-
-            # Button to close the popup
-            close_button = tk.Button(popup, text="Close", command=popup.destroy)
-            close_button.pack(pady=10)
+            # Clear previous selection and select patient's tests
+            self.tests_tree.selection_clear(0, tk.END)
+            for item in self.tests_tree.get_children():
+                if self.tests_tree.item(item)['values'][0] in tests:
+                    self.tests_tree.selection_add(item)
 
             messagebox.showinfo("Success", "Patient information loaded successfully")
         except Exception as e:
@@ -461,13 +365,11 @@ class UserPage(ttk.Frame):
             cursor.close()
 
     def print_info(self):
-        # Get patient phone number
         phone = self.phone_entry.get()
         if not phone:
             messagebox.showerror("Error", "Please enter a phone number to print patient information.")
             return
 
-        # Fetch patient data
         cursor = self.db.cursor()
         try:
             cursor.execute("SELECT * FROM patients WHERE phone_number = %s", (phone,))
@@ -477,17 +379,24 @@ class UserPage(ttk.Frame):
                 messagebox.showerror("Error", "Patient not found.")
                 return
 
-            # Fetch patient's tests and results
             cursor.execute("""
-                SELECT t.test_name, t.description, tr.result, tr.test_date, tr.comment
-                FROM patient_tests pt
-                JOIN tests t ON pt.test_id = t.test_id
-                JOIN test_results tr ON pt.test_id = tr.test_id
-                WHERE pt.patient_id = %s
+                SELECT 
+                    p.patient_id, p.full_name, p.phone_number, p.gender, p.dob, p.age, p.address, p.medical_history,
+                    t.test_id, t.test_name, 
+                    r.status, r.test_date, r.comments
+                FROM 
+                    patients p
+                JOIN 
+                    patient_tests pt ON p.patient_id = pt.patient_id
+                JOIN 
+                    tests t ON pt.test_id = t.test_id
+                LEFT JOIN 
+                    results r ON pt.patient_id = r.patient_id AND pt.test_id = r.test_id
+                WHERE 
+                    p.patient_id = %s
             """, (patient[0],))
-            test_results = cursor.fetchall()
+            results = cursor.fetchall()
 
-            # Prepare data for the PDF report
             patient_data = {
                 "name": patient[2],
                 "phone": patient[1],
@@ -496,18 +405,50 @@ class UserPage(ttk.Frame):
                 "age": patient[5],
                 "address": patient[6],
                 "medical_history": patient[7],
-                "tests": [(test_name, (result, test_date, comment)) for test_name, description, result, test_date, comment in test_results]
+                "tests": [(row[9], (row[10] or "Pending", row[11] or "N/A", row[12] or "N/A")) for row in results]
             }
 
-            # Call the report_generate function to create a PDF
-            pdf_file_path = report_generate.generate_report(patient_data)
-
-            # Open the PDF file with the default PDF viewer
-            os.startfile(pdf_file_path)
+            pdf_file_path = ReportGenerate(patient_data)
+            subprocess.call(['xdg-open', pdf_file_path])
 
             messagebox.showinfo("Success", "Patient information PDF has been generated and opened.")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to print patient information: {str(e)}")
+        finally:
+            cursor.close()
+
+    def submit_result(self):
+        patient_id = self.patient_id_var.get()
+        test_id = self.test_id_var.get()
+        result = self.result_var.get()
+        description = self.description_text.get("1.0", tk.END).strip()
+        test_date = self.date_entry.get_date()
+        doctor_technician = self.doctor_entry.get()
+        comments = self.comments_text.get("1.0", tk.END).strip()
+
+        if not all([patient_id, test_id, result, description, test_date, doctor_technician]):
+            messagebox.showerror("Error", "All fields except Comments are required.")
+            return
+
+        cursor = self.db.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO results (patient_id, test_id, status, description, test_date, doctor_technician, comments)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                status = VALUES(status),
+                description = VALUES(description),
+                test_date = VALUES(test_date),
+                doctor_technician = VALUES(doctor_technician),
+                comments = VALUES(comments)
+            """, (patient_id, test_id, result, description, test_date, doctor_technician, comments))
+
+            self.db.commit()
+            messagebox.showinfo("Success", "Test result submitted successfully.")
+            self.clear_result_fields()
+        except Exception as e:
+            self.db.rollback()
+            messagebox.showerror("Error", f"Failed to submit test result: {str(e)}")
         finally:
             cursor.close()
 
@@ -519,8 +460,22 @@ class UserPage(ttk.Frame):
         self.age_var.set("")
         self.address_entry.delete(0, tk.END)
         self.history_entry.delete(0, tk.END)
-        self.tree.selection_clear(0, tk.END)
-        self.results_text.delete('1.0', tk.END)
-    
+        self.tests_tree.selection_clear(0, tk.END)
+        self.clear_result_fields()
+
+    def clear_result_fields(self):
+        self.patient_id_var.set("")
+        self.test_id_var.set("")
+        self.result_var.set("Select Result")
+        self.description_text.delete("1.0", tk.END)
+        self.date_entry.set_date(date.today())
+        self.doctor_entry.delete(0, tk.END)
+        self.comments_text.delete("1.0", tk.END)
+
+    def update_patient_table(self):
+        for item in self.patient_table.get_children():
+            self.patient_table.delete(item)
+        self.load_patients()
+
     def logout(self):
         self.logout_callback()

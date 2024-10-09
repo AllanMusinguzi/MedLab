@@ -1,0 +1,25 @@
+CREATE TABLE results (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_id INT NOT NULL,
+    test_id INT NOT NULL,
+    result_value VARCHAR(255) NOT NULL, -- To store the actual result value
+    status VARCHAR(10) NOT NULL, -- For status (e.g., 'Positive', 'Negative', etc.)
+    description TEXT NOT NULL, -- Description of the result
+    test_date DATE NOT NULL, -- Date when the test was performed
+    doctor_technician VARCHAR(255) NOT NULL, -- Name of the doctor or technician
+    comments TEXT, -- Any additional comments
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp for record creation
+    FOREIGN KEY (patient_id) REFERENCES patients(patient_id), -- Link to patients table
+    FOREIGN KEY (test_id) REFERENCES tests(test_id) -- Link to tests table
+);
+
+
+
+CREATE TABLE patient_tests (
+    patient_id INT,
+    test_id INT,
+    PRIMARY KEY (patient_id, test_id),
+    FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
+    FOREIGN KEY (test_id) REFERENCES tests(test_id)
+);
+
