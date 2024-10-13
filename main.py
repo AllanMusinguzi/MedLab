@@ -8,7 +8,6 @@ import configparser
 from pages.login_signup import LoginSignup
 from pages.user_page import UserPage
 from pages.admin_page import AdminPage
-#from pages.report_generate import ReportGenerate
 
 class LoadingScreen(tk.Toplevel):
     def __init__(self, master):

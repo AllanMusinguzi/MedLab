@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, Toplevel, Label, Entry
 from tkcalendar import DateEntry
 from datetime import date
 from report_generate import ReportGenerate
@@ -12,9 +12,12 @@ class UserPage(ttk.Frame):
         self.user_id = user_id
         self.logout_callback = logout_callback
 
+        self.setup_styles()
+        self.create_widgets()
+
+    def setup_styles(self):
         self.style = ttk.Style()
         self.style.theme_use('clam')
-
         self.style.configure('.', font=('Ubuntu', 11))
         self.style.configure('TFrame', background='#f0f0f0')
         self.style.configure('TLabelframe', background='#f0f0f0')
@@ -23,155 +26,173 @@ class UserPage(ttk.Frame):
         self.style.map('TButton', background=[('active', '#3a5a8c')])
         self.style.configure('Header.TLabel', font=('Ubuntu', 12, 'bold'))
 
-        self.create_widgets()
-
     def create_widgets(self):
         self.configure(style='TFrame')
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
         main_frame = ttk.Frame(self, padding="10", style='TFrame')
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        main_frame.grid(row=0, column=0, sticky="nsew")
         main_frame.columnconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
+        main_frame.rowconfigure(1, weight=1)
 
-        # Header
-        header_frame = ttk.Frame(main_frame, style='TFrame')
-        header_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 20))
-        ttk.Label(header_frame, text="Patient Management", style='Header.TLabel').pack(side=tk.LEFT)
-        ttk.Button(header_frame, text="Logout", command=self.logout_callback).pack(side=tk.RIGHT)
+        self.create_header(main_frame)
+        self.create_patient_frame(main_frame)
+        self.create_tests_results_frame(main_frame)
+        self.create_buttons(main_frame)
 
-        # Patient Information Frame
-        patient_frame = ttk.LabelFrame(main_frame, text="Patient Information", padding="10", style='TLabelframe', labelanchor="n")
-        patient_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 10), pady=(0, 20))
+    def create_header(self, parent):
+        header_frame = ttk.Frame(parent, style='TFrame')
+        header_frame.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 20))
+        header_frame.columnconfigure(0, weight=1)
+        ttk.Label(header_frame, text="Patient Management", style='Header.TLabel').grid(row=0, column=0, sticky="w")
+        ttk.Button(header_frame, text="Logout", command=self.logout_callback).grid(row=0, column=1, sticky="e")
+
+    def create_patient_frame(self, parent):
+        patient_frame = ttk.LabelFrame(parent, text="Patient Information", padding="10", style='TLabelframe')
+        patient_frame.grid(row=1, column=0, sticky="nsew", padx=(0, 5), pady=(0, 10))
         patient_frame.columnconfigure(1, weight=1)
+        patient_frame.rowconfigure(7, weight=1)
 
         labels = ["Phone Number:", "Full Name:", "Gender:", "Date of Birth:", "Age:", "Address:", "Medical History:"]
+        self.patient_entries = {}
+
         for i, label in enumerate(labels):
-            ttk.Label(patient_frame, text=label).grid(row=i, column=0, sticky=tk.W, pady=5)
+            ttk.Label(patient_frame, text=label).grid(row=i, column=0, sticky="w", pady=5)
+            
+            self.phone_entry = ttk.Entry(patient_frame)
+            self.phone_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=5)
 
-        self.phone_entry = ttk.Entry(patient_frame)
-        self.phone_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=5)
+            self.name_entry = ttk.Entry(patient_frame)
+            self.name_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=5)
 
-        self.name_entry = ttk.Entry(patient_frame)
-        self.name_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=5)
+            self.address_entry = ttk.Entry(patient_frame)
+            self.address_entry.grid(row=5, column=1, sticky=(tk.W, tk.E), pady=5)
 
-        gender_frame = ttk.Frame(patient_frame, style='TFrame')
-        gender_frame.grid(row=2, column=1, sticky=(tk.W, tk.E), pady=5)
-        self.gender_var = tk.StringVar()
-        ttk.Radiobutton(gender_frame, text="Male", variable=self.gender_var, value="Male").pack(side=tk.LEFT, padx=(0, 10))
-        ttk.Radiobutton(gender_frame, text="Female", variable=self.gender_var, value="Female").pack(side=tk.LEFT)
+            self.history_entry = ttk.Entry(patient_frame)
+            self.history_entry.grid(row=6, column=1, sticky=(tk.W, tk.E), pady=5)
 
-        self.dob_entry = DateEntry(patient_frame, width=12, background='#4a7abc', foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd')
-        self.dob_entry.grid(row=3, column=1, sticky=(tk.W, tk.E), pady=5)
-        self.dob_entry.bind("<<DateEntrySelected>>", self.calculate_age)
+            if label == "Gender:":
+                gender_frame = ttk.Frame(patient_frame, style='TFrame')
+                gender_frame.grid(row=i, column=1, sticky="ew", pady=5)
+                self.gender_var = tk.StringVar()
+                ttk.Radiobutton(gender_frame, text="Male", variable=self.gender_var, value="Male").pack(side=tk.LEFT, padx=(0, 10))
+                ttk.Radiobutton(gender_frame, text="Female", variable=self.gender_var, value="Female").pack(side=tk.LEFT)
+                self.patient_entries[label] = self.gender_var
+            elif label == "Date of Birth:":
+                self.dob_entry = DateEntry(patient_frame, width=12, background='#4a7abc', foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd')
+                self.dob_entry.grid(row=i, column=1, sticky="ew", pady=5)
+                self.dob_entry.bind("<<DateEntrySelected>>", self.calculate_age)
+                self.patient_entries[label] = self.dob_entry
+            elif label == "Age:":
+                self.age_var = tk.StringVar()
+                ttk.Label(patient_frame, textvariable=self.age_var).grid(row=i, column=1, sticky="ew", pady=5)
+                self.patient_entries[label] = self.age_var
+            else:
+                entry = ttk.Entry(patient_frame)
+                entry.grid(row=i, column=1, sticky="ew", pady=5)
+                self.patient_entries[label] = entry
 
-        self.age_var = tk.StringVar()
-        ttk.Label(patient_frame, textvariable=self.age_var).grid(row=4, column=1, sticky=(tk.W, tk.E), pady=5)
+        self.create_patient_table(patient_frame)
 
-        self.address_entry = ttk.Entry(patient_frame)
-        self.address_entry.grid(row=5, column=1, sticky=(tk.W, tk.E), pady=5)
+    def create_patient_table(self, parent):
+        columns = ("Patient ID", "Test ID", "Name", "Phone", "Gender", "Age")
+        self.patient_table = ttk.Treeview(parent, columns=columns, show="headings")
+        self.patient_table.grid(row=8, column=0, columnspan=2, sticky="nsew", pady=10)
+        
+        for col in columns:
+            self.patient_table.heading(col, text=col)
+            self.patient_table.column(col, width=100)  # Adjust width as needed
 
-        self.history_entry = ttk.Entry(patient_frame)
-        self.history_entry.grid(row=6, column=1, sticky=(tk.W, tk.E), pady=5)
+        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.patient_table.yview)
+        scrollbar.grid(row=8, column=2, sticky="ns")
+        self.patient_table.configure(yscrollcommand=scrollbar.set)
 
-        # Patient Table
-        self.patient_table = ttk.Treeview(patient_frame, columns=("Patient ID","Test ID", "Name", "Phone", "Gender", "Age"), show="headings")
-        self.patient_table.grid(row=7, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10)
-        self.patient_table.heading("Patient ID", text="Patient ID")
-        self.patient_table.heading("Test ID", text="Test ID")
-        self.patient_table.heading("Name", text="Name")
-        self.patient_table.heading("Phone", text="Phone")
-        self.patient_table.heading("Gender", text="Gender")
-        self.patient_table.heading("Age", text="Age")
+        self.patient_table.bind("<<TreeviewSelect>>", self.on_patient_select)
         self.load_patients()
 
-        # Binding selection event
-        self.patient_table.bind("<<TreeviewSelect>>", self.on_patient_select)
-
-        # Tests and Results Frame
-        tests_results_frame = ttk.Frame(main_frame, style='TFrame')
-        tests_results_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(10, 0), pady=(0, 20))
+    def create_tests_results_frame(self, parent):
+        tests_results_frame = ttk.Frame(parent, style='TFrame')
+        tests_results_frame.grid(row=1, column=1, sticky="nsew", padx=(5, 0), pady=(0, 10))
         tests_results_frame.columnconfigure(0, weight=1)
         tests_results_frame.rowconfigure(1, weight=1)
 
-        self.tests_frame = ttk.LabelFrame(tests_results_frame, text="Tests", padding="10", style='TLabelframe', labelanchor="n")
-        self.tests_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
-        self.tests_frame.columnconfigure(0, weight=1)
-        self.tests_frame.rowconfigure(0, weight=1)
+        self.create_tests_frame(tests_results_frame)
+        self.create_results_frame(tests_results_frame)
 
-        # Create a Treeview for tests
-        self.tests_tree = ttk.Treeview(self.tests_frame, columns=("ID", "Name", "Description"), show="headings")
-        self.tests_tree.heading("ID", text="ID")
-        self.tests_tree.heading("Name", text="Test Name")
-        self.tests_tree.heading("Description", text="Description")
+    def create_tests_frame(self, parent):
+        tests_frame = ttk.LabelFrame(parent, text="Tests", padding="10", style='TLabelframe')
+        tests_frame.grid(row=0, column=0, sticky="nsew", pady=(0, 5))
+        tests_frame.columnconfigure(0, weight=1)
+        tests_frame.rowconfigure(0, weight=1)
+
+        columns = ("ID", "Name", "Description")
+        self.tests_tree = ttk.Treeview(tests_frame, columns=columns, show="headings")
         self.tests_tree.grid(row=0, column=0, sticky="nsew")
+        
+        for col in columns:
+            self.tests_tree.heading(col, text=col)
+            self.tests_tree.column(col, width=100)  # Adjust width as needed
 
-        # Bind the selection event
+        scrollbar = ttk.Scrollbar(tests_frame, orient="vertical", command=self.tests_tree.yview)
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        self.tests_tree.configure(yscrollcommand=scrollbar.set)
+
         self.tests_tree.bind("<<TreeviewSelect>>", self.on_test_select)
-
         self.load_tests()
 
-        # Results Frame
-        self.results_frame = ttk.LabelFrame(tests_results_frame, text="Test Results", padding="10", style='TLabelframe', labelanchor="n")
-        self.results_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
-        self.results_frame.columnconfigure(1, weight=1)
+    def create_results_frame(self, parent):
+        results_frame = ttk.LabelFrame(parent, text="Test Results", padding="10", style='TLabelframe')
+        results_frame.grid(row=1, column=0, sticky="nsew", pady=(5, 0))
+        results_frame.columnconfigure(1, weight=1)
 
-        ttk.Label(self.results_frame, text="Patient ID:").grid(row=0, column=0, sticky="w")
-        self.patient_id_var = tk.StringVar()
-        self.patient_id_entry = ttk.Entry(self.results_frame, textvariable=self.patient_id_var, state="readonly")
-        self.patient_id_entry.grid(row=0, column=1, sticky="ew")
+        labels = ["Patient ID:", "Test ID:", "Result:", "Description:", "Date of Test:", "Doctor/Technician:", "Comments:"]
+        self.result_entries = {}
 
-        ttk.Label(self.results_frame, text="Test ID:").grid(row=1, column=0, sticky="w")
-        self.test_id_var = tk.StringVar()
-        self.test_id_entry = ttk.Entry(self.results_frame, textvariable=self.test_id_var, state="normal")
-        self.test_id_entry.grid(row=1, column=1, sticky="ew")
+        for i, label in enumerate(labels):
+            ttk.Label(results_frame, text=label).grid(row=i, column=0, sticky="w", pady=5)
+            
+            if label == "Patient ID:":
+                self.patient_id_var = tk.StringVar()
+                entry = ttk.Entry(results_frame, textvariable=self.patient_id_var, state="readonly")
+            elif label == "Test ID:":
+                self.test_id_var = tk.StringVar()
+                entry = ttk.Entry(results_frame, textvariable=self.test_id_var, state="normal")
+            elif label == "Result:":
+                self.result_var = tk.StringVar(value="Select Result")
+                entry = ttk.Combobox(results_frame, textvariable=self.result_var, values=["Positive", "Negative", "Normal", "Abnormal"], state="readonly")
+            elif label == "Date of Test:":
+                entry = DateEntry(results_frame, width=12, background='#4a7abc', foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd')
+            elif label in ["Description:", "Comments:"]:
+                entry = tk.Text(results_frame, height=3, width=30)
+            else:
+                entry = ttk.Entry(results_frame)
+            
+            entry.grid(row=i, column=1, sticky="ew", pady=5)
+            self.result_entries[label] = entry
 
-        ttk.Label(self.results_frame, text="Result:").grid(row=2, column=0, sticky="w")
-        self.result_var = tk.StringVar(value="Select Result")
-        self.result_combobox = ttk.Combobox(self.results_frame, textvariable=self.result_var, values=["Positive", "Negative", "Normal", "Abnormal"], state="readonly")
-        self.result_combobox.grid(row=2, column=1, sticky="ew")
+        ttk.Button(results_frame, text="Submit Result", command=self.submit_result).grid(row=len(labels), column=0, columnspan=2, pady=(10, 0))
 
-        ttk.Label(self.results_frame, text="Description:").grid(row=3, column=0, sticky="w")
-        self.description_text = tk.Text(self.results_frame, height=3, width=30)
-        self.description_text.grid(row=3, column=1, sticky="ew")
-
-        ttk.Label(self.results_frame, text="Date of Test:").grid(row=4, column=0, sticky="w")
-        self.date_entry = DateEntry(self.results_frame, width=12, background='#4a7abc', foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd')
-        self.date_entry.grid(row=4, column=1, sticky="ew")
-
-        ttk.Label(self.results_frame, text="Doctor/Technician:").grid(row=5, column=0, sticky="w")
-        self.doctor_entry = ttk.Entry(self.results_frame)
-        self.doctor_entry.grid(row=5, column=1, sticky="ew")
-
-        ttk.Label(self.results_frame, text="Comments:").grid(row=6, column=0, sticky="w")
-        self.comments_text = tk.Text(self.results_frame, height=3, width=30)
-        self.comments_text.grid(row=6, column=1, sticky="ew")
-
-        ttk.Button(self.results_frame, text="Submit Result", command=self.submit_result).grid(row=7, column=0, columnspan=2, pady=(10, 0))
-
-        # Buttons
-        button_frame = ttk.Frame(main_frame, style='TFrame')
-        button_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(20, 0))
-        button_frame.columnconfigure(0, weight=1)
-        button_frame.columnconfigure(1, weight=1)
-        button_frame.columnconfigure(2, weight=1)
-        button_frame.columnconfigure(3, weight=1)
+    def create_buttons(self, parent):
+        button_frame = ttk.Frame(parent, style='TFrame')
+        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+        button_frame.columnconfigure((0, 1, 2, 3), weight=1)
 
         buttons = [
             ("Add Patient", self.add_patient),
-            ("Modify Patient", self.modify_patient),
+            ("Update Patient", self.modify_patient),
             ("View Patient", self.view_patient),
             ("Print Info", self.print_info)
         ]
 
         for i, (text, command) in enumerate(buttons):
-            ttk.Button(button_frame, text=text, command=command).grid(row=0, column=i, padx=5, sticky=(tk.W, tk.E))
+            ttk.Button(button_frame, text=text, command=command).grid(row=0, column=i, padx=5, sticky="ew")
 
     def load_patients(self):
         cursor = self.db.cursor()
 
-        # Modify the query to get patient details and associated tests
+        #Query to get patient details and associated tests
         query = """
         SELECT p.patient_id, GROUP_CONCAT(pt.test_id) AS test_ids, p.full_name, p.phone_number, p.gender, p.age
         FROM patients p
@@ -183,7 +204,6 @@ class UserPage(ttk.Frame):
         patients = cursor.fetchall()
         cursor.close()
 
-        # Clear the table before loading new data
         for patient in self.patient_table.get_children():
             self.patient_table.delete(patient)
 
@@ -210,15 +230,14 @@ class UserPage(ttk.Frame):
 
         # Define the on_patient_select method
     def on_patient_select(self, event):
-            # Get the selected item
         selected_item = self.patient_table.selection()
         if selected_item:
                 # Fetch the values from the selected row
             patient_data = self.patient_table.item(selected_item)['values']
             if patient_data:
                     # Set Patient ID and Test ID in the results frame
-                self.patient_id_var.set(patient_data[0])  # Patient ID is the first column
-                self.test_id_var.set(patient_data[1] if patient_data[1] else '')  # Test ID is the second column
+                self.patient_id_var.set(patient_data[0])
+                self.test_id_var.set(patient_data[1] if patient_data[1] else '') 
 
     def calculate_age(self, event=None):
         birth_date = self.dob_entry.get_date()
@@ -289,7 +308,7 @@ class UserPage(ttk.Frame):
         address = self.address_entry.get()
         history = self.history_entry.get()
 
-        selected_items = self.tests_tree.selection([0])
+        selected_items = self.tests_tree.selection()
         if not selected_items:
             messagebox.showerror("Error", "Please select at least one test.")
             return
@@ -332,33 +351,52 @@ class UserPage(ttk.Frame):
                 messagebox.showerror("Error", "Patient not found.")
                 return
 
-            self.patient_id_var.set(patient[0])
-            self.name_entry.delete(0, tk.END)
-            self.name_entry.insert(0, patient[2])
-            self.gender_var.set(patient[3])
-            self.dob_entry.set_date(patient[4])
-            self.age_var.set(patient[5])
-            self.address_entry.delete(0, tk.END)
-            self.address_entry.insert(0, patient[6])
-            self.history_entry.delete(0, tk.END)
-            self.history_entry.insert(0, patient[7])
+            # Create a responsive dialog to display patient information
+            dialog = Toplevel(self)
+            dialog.title("Patient Information")
+            dialog.geometry("400x400")  # default size 
+            dialog.grab_set()  # making the dialog modal
+
+            # labels and entries
+            Label(dialog, text="Patient ID:").grid(row=0, column=0, sticky="w", padx=10, pady=5)
+            Label(dialog, text=patient[0]).grid(row=0, column=1, sticky="w", padx=10, pady=5)
+
+            Label(dialog, text="Name:").grid(row=1, column=0, sticky="w", padx=10, pady=5)
+            Label(dialog, text=patient[2]).grid(row=1, column=1, sticky="w", padx=10, pady=5)
+
+            Label(dialog, text="Gender:").grid(row=2, column=0, sticky="w", padx=10, pady=5)
+            Label(dialog, text=patient[3]).grid(row=2, column=1, sticky="w", padx=10, pady=5)
+
+            Label(dialog, text="Date of Birth:").grid(row=3, column=0, sticky="w", padx=10, pady=5)
+            Label(dialog, text=patient[4]).grid(row=3, column=1, sticky="w", padx=10, pady=5)
+
+            Label(dialog, text="Age:").grid(row=4, column=0, sticky="w", padx=10, pady=5)
+            Label(dialog, text=patient[5]).grid(row=4, column=1, sticky="w", padx=10, pady=5)
+
+            Label(dialog, text="Address:").grid(row=5, column=0, sticky="w", padx=10, pady=5)
+            Label(dialog, text=patient[6]).grid(row=5, column=1, sticky="w", padx=10, pady=5)
+
+            Label(dialog, text="History:").grid(row=6, column=0, sticky="w", padx=10, pady=5)
+            Label(dialog, text=patient[7]).grid(row=6, column=1, sticky="w", padx=10, pady=5)
 
             # Fetch and display patient's tests
             cursor.execute("""
-                SELECT t.test_id 
+                SELECT t.test_id, t.test_name 
                 FROM patient_tests pt
                 JOIN tests t ON pt.test_id = t.test_id
                 WHERE pt.patient_id = %s
             """, (patient[0],))
-            tests = [test[0] for test in cursor.fetchall()]
+            tests = cursor.fetchall()
 
-            # Clear previous selection and select patient's tests
-            self.tests_tree.selection_clear(0, tk.END)
-            for item in self.tests_tree.get_children():
-                if self.tests_tree.item(item)['values'][0] in tests:
-                    self.tests_tree.selection_add(item)
+            # Add a section for displaying patient's tests
+            Label(dialog, text="Tests to be carried out:", font=("Ubuntu", 12, "bold")).grid(row=7, column=0, columnspan=2, padx=10, pady=10)
 
+            for index, test in enumerate(tests, start=8):  # Start after patient details
+                Label(dialog, text=f"Test {index-7}: {test[1]}").grid(row=index, column=0, columnspan=2, padx=10, pady=2)
+
+            # Success message
             messagebox.showinfo("Success", "Patient information loaded successfully")
+
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load patient: {str(e)}")
         finally:
@@ -372,6 +410,7 @@ class UserPage(ttk.Frame):
 
         cursor = self.db.cursor()
         try:
+            # Fetch patient details
             cursor.execute("SELECT * FROM patients WHERE phone_number = %s", (phone,))
             patient = cursor.fetchone()
 
@@ -379,6 +418,7 @@ class UserPage(ttk.Frame):
                 messagebox.showerror("Error", "Patient not found.")
                 return
 
+            # Fetch patient test results
             cursor.execute("""
                 SELECT 
                     p.patient_id, p.full_name, p.phone_number, p.gender, p.dob, p.age, p.address, p.medical_history,
@@ -397,17 +437,30 @@ class UserPage(ttk.Frame):
             """, (patient[0],))
             results = cursor.fetchall()
 
+            # Construct the patient data dictionary
             patient_data = {
-                "name": patient[2],
-                "phone": patient[1],
+                "name": patient[1],  
+                "phone": patient[2], 
                 "gender": patient[3],
                 "dob": patient[4],
                 "age": patient[5],
                 "address": patient[6],
                 "medical_history": patient[7],
-                "tests": [(row[9], (row[10] or "Pending", row[11] or "N/A", row[12] or "N/A")) for row in results]
+                "tests": [
+                    {
+                        "test_name": row[9],  # Test name
+                        #"description": row[8],
+                        "status": row[10] or "Pending",  # Test status
+                        "test_date": row[11] or "N/A",  # Test date
+                        "comments": row[12] or "N/A"  # Test comments
+                    } for row in results
+                ]
             }
 
+            # Debug: Print patient_data to see the structures
+            print("Patient Data:", patient_data)
+
+            # Assuming ReportGenerate is a function that creates a PDF from the data
             pdf_file_path = ReportGenerate(patient_data)
             subprocess.call(['xdg-open', pdf_file_path])
 
@@ -421,11 +474,12 @@ class UserPage(ttk.Frame):
         patient_id = self.patient_id_var.get()
         test_id = self.test_id_var.get()
         result = self.result_var.get()
-        description = self.description_text.get("1.0", tk.END).strip()
-        test_date = self.date_entry.get_date()
-        doctor_technician = self.doctor_entry.get()
-        comments = self.comments_text.get("1.0", tk.END).strip()
+        description = self.result_entries["Description:"].get("1.0", tk.END).strip()
+        test_date = self.result_entries["Date of Test:"].get_date()
+        doctor_technician = self.result_entries["Doctor/Technician:"].get()
+        comments = self.result_entries["Comments:"].get("1.0", tk.END).strip()
 
+        # Validate that required fields are filled
         if not all([patient_id, test_id, result, description, test_date, doctor_technician]):
             messagebox.showerror("Error", "All fields except Comments are required.")
             return
@@ -445,7 +499,7 @@ class UserPage(ttk.Frame):
 
             self.db.commit()
             messagebox.showinfo("Success", "Test result submitted successfully.")
-            self.clear_result_fields()
+            self.clear_result_fields()  # Clear fields after successful submission
         except Exception as e:
             self.db.rollback()
             messagebox.showerror("Error", f"Failed to submit test result: {str(e)}")
@@ -467,10 +521,10 @@ class UserPage(ttk.Frame):
         self.patient_id_var.set("")
         self.test_id_var.set("")
         self.result_var.set("Select Result")
-        self.description_text.delete("1.0", tk.END)
-        self.date_entry.set_date(date.today())
-        self.doctor_entry.delete(0, tk.END)
-        self.comments_text.delete("1.0", tk.END)
+        self.result_entries["Description:"].delete("1.0", tk.END)
+        self.result_entries["Comments:"].delete("1.0", tk.END)        
+        self.result_entries["Date of Test:"].set_date(date.today())
+        self.result_entries["Doctor/Technician:"].delete(0, tk.END)
 
     def update_patient_table(self):
         for item in self.patient_table.get_children():

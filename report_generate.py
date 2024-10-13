@@ -1,20 +1,28 @@
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import Paragraph, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import Table, TableStyle, Paragraph
+from reportlab.lib.utils import simpleSplit
 import os
 
 def ReportGenerate(patient_data):
-    # Create a temporary file for the PDF report
-    pdf_file_path = os.path.join(os.path.expanduser("~"), "/home/imap/pandas/MINE/MedLab/Downloads", f"{patient_data['name']} Pathology Report.pdf")
+    pdf_file_path = os.path.join(os.path.expanduser("~"), "pandas/MINE/MedLab/Downloads", f"{patient_data['name']} Pathology Report.pdf")
     
-    # Create a canvas
     c = canvas.Canvas(pdf_file_path, pagesize=letter)
     width, height = letter
-    
-    # Helper function to draw a bordered section
+
+    def check_space_needed(required_space):
+        """ Check if there is enough space on the current page, otherwise create a new page. """
+        nonlocal y
+        if y - required_space < 60:  # 60 is a margin threshold before the bottom
+            c.showPage()  # Start a new page
+            y = height - 30  # Reset y-coordinate for the new page
+
     def draw_bordered_section(title, y_start, content_func):
+        """ Draw a bordered section with a title and dynamic content. """
+        check_space_needed(200)  # Check for space before drawing
+
         c.setStrokeColor(colors.black)
         c.setFont("Helvetica-Bold", 14)
         c.drawString(60, y_start, title)
@@ -29,35 +37,57 @@ def ReportGenerate(patient_data):
     c.drawString((width - logo_width) / 2, height - 30, logo_text)
     
     c.setFont("Helvetica", 12)
-    contact_text = "Contact: info@lancetlabs.com | Phone: +(256) 756-7890 | Address: 123 Clinic Rd, Mukono, Uganda"
+    contact_text = "info@lancetlabs.com | +(256) 756-7890 | 123 Clinic Rd, Mukono, Uganda"
     contact_width = c.stringWidth(contact_text, "Helvetica", 12)
     c.drawString((width - contact_width) / 2, height - 50, contact_text)
-    
-    # Patient Information
+
+    y = height - 80  # Initialize y-coordinate
+
     def draw_patient_info(y):
         c.setFont("Helvetica", 12)
-        c.drawString(60, y, f"Name: {patient_data['name']}")
-        c.drawString(60, y - 20, f"Phone: {patient_data['phone']}")
-        c.drawString(60, y - 40, f"Gender: {patient_data['gender']}")
-        c.drawString(60, y - 60, f"Date of Birth: {patient_data['dob']}")
-        c.drawString(60, y - 80, f"Age: {patient_data['age']}")
-        c.drawString(60, y - 100, f"Address: {patient_data['address']}")
-        c.drawString(60, y - 120, f"Medical History: {patient_data['medical_history']}")
-    
-    y = draw_bordered_section("Patient Information", height - 80, draw_patient_info)
-    
-    # Tests and Results
+        info_lines = [
+            f"Name: {patient_data['name']}",
+            f"Phone: {patient_data['phone']}",
+            f"Gender: {patient_data['gender']}",
+            f"Date of Birth: {patient_data['dob']}",
+            f"Age: {patient_data['age']}",
+            f"Address: {patient_data['address']}",
+            "Medical History:"
+        ]
+        
+        for line in info_lines:
+            check_space_needed(15)  # Check for space for each line
+            c.drawString(60, y, line)
+            y -= 15
+        
+        # Wrap and draw medical history
+        medical_history = patient_data['medical_history']
+        wrapped_text = simpleSplit(medical_history, "Helvetica", 12, width - 130)
+        for i, line in enumerate(wrapped_text):
+            check_space_needed(15)  # Check for space for each wrapped line
+            c.drawString(60, y, line)
+            y -= 15
+            if i >= 3:  # Limit to 3 lines
+                c.drawString(60, y, "...")
+                y -= 15
+                break
+
+    y = draw_bordered_section("Patient Information", y, draw_patient_info)
+
     def draw_tests_results(y):
         styles = getSampleStyleSheet()
-        data = [["Test", "Description", "Result", "Date", "Comment"]]
-        for test_data, result in patient_data['tests']:
+        custom_style = ParagraphStyle('CustomStyle', parent=styles['Normal'], fontSize=10, leading=12)
+        
+        data = [["Test", "Status", "Date", "Comment"]]
+        for test in patient_data['tests']:
+            wrapped_comment = Paragraph(test['comments'], custom_style)
             data.append([
-                test_data['test_name'],
-                test_data['description'],
-                result['status'],
-                result['test_date'],
-                result['comments']
+                test['test_name'],
+                test['status'],
+                test['test_date'],
+                wrapped_comment
             ])
+        
         table = Table(data, colWidths=[80, 100, 80, 80, 120])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
@@ -73,26 +103,23 @@ def ReportGenerate(patient_data):
             ('FONTSIZE', (0, 1), (-1, -1), 10),
             ('TOPPADDING', (0, 1), (-1, -1), 6),
             ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP')
         ]))
         table.wrapOn(c, width - 120, height)
+        check_space_needed(150)  # Check for space before drawing the table
         table.drawOn(c, 60, y - 150)
-    
-    y = draw_bordered_section("Tests and Results", y - 20, draw_tests_results)
-    
-    # Prescription
+
+    y = draw_bordered_section("Tests and Results", y, draw_tests_results)
+
     def draw_prescription(y):
         c.setFont("Helvetica", 12)
         c.drawString(60, y, "Medical Prescription:")
-        c.line(60, y - 20, width - 60, y - 20)
-        c.line(60, y - 40, width - 60, y - 40)
-        c.line(60, y - 60, width - 60, y - 60)
-        c.line(60, y - 80, width - 60, y - 80)
-        c.line(60, y - 100, width - 60, y - 100)
-        c.line(60, y - 120, width - 60, y - 120)
+        for i in range(6):
+            check_space_needed(20)  # Check for space for each line
+            c.line(60, y - 20 * (i + 1), width - 60, y - 20 * (i + 1))
     
-    draw_bordered_section("Prescription", y - 20, draw_prescription)
-    
-    # Save the PDF
+    y = draw_bordered_section("Prescription", y, draw_prescription)
+
     c.save()
     return pdf_file_path
