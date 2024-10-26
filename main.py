@@ -4,6 +4,8 @@ import mysql.connector
 from mysql.connector import Error
 import threading
 import configparser
+import os
+import sys
 
 from pages.login_signup import LoginSignup
 from pages.user_page import UserPage
@@ -55,36 +57,74 @@ class MedicalLabSystem:
         self.master = master
         self.config = self.load_config()
 
+        # Set main window attributes
         self.master.title(self.config['APP']['title'])
         self.master.geometry(f"{self.config['APP']['initial_width']}x{self.config['APP']['initial_height']}")
         self.master.minsize(int(self.config['APP']['min_width']), int(self.config['APP']['min_height']))
-        self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.master.configure(bg=self.config['COLORS']['background'])  # Apply main background color
 
+        # Initialize styles
         self.style = ttk.Style()
         self.style.theme_use(self.config['THEME']['style'])
         self.style.configure('.', font=(self.config['THEME']['font_family'], int(self.config['THEME']['font_size'])))
-        self.style.configure('TButton', padding=int(self.config['THEME']['button_padding']))
-        self.style.configure('TEntry', padding=int(self.config['THEME']['entry_padding']))
-        self.style.configure('TLabel', padding=int(self.config['THEME']['label_padding']))
+        
+        # Button styling
+        self.style.configure('TButton', 
+                             background=self.config['COLORS']['button_bg'], 
+                             foreground=self.config['COLORS']['button_fg'],
+                             padding=int(self.config['THEME']['button_padding']))
+        self.style.map('TButton',
+                       background=[('active', self.config['COLORS']['button_active']),
+                                   ('disabled', self.config['COLORS']['button_disabled'])])
 
-        # Apply colors
-        self.master.configure(bg=self.config['COLORS']['background'])
-        self.style.configure('.', background=self.config['COLORS']['background'], foreground=self.config['COLORS']['text'])
-        self.style.configure('TButton', background=self.config['COLORS']['button'], foreground=self.config['COLORS']['button_text'])
+        # Entry styling
+        self.style.configure('TEntry', 
+                             fieldbackground=self.config['COLORS']['entry_bg'],
+                             foreground=self.config['COLORS']['entry_fg'],
+                             bordercolor=self.config['COLORS']['entry_border'])
+        
+        # Label styling
+        self.style.configure('TLabel', 
+                             background=self.config['COLORS']['background'], 
+                             foreground=self.config['COLORS']['label_fg'])
 
+        # Treeview (Table) styling
+        self.style.configure('Treeview', 
+                             background=self.config['COLORS']['table_bg'],
+                             foreground=self.config['COLORS']['table_fg'],
+                             fieldbackground=self.config['COLORS']['table_bg'])
+        self.style.map('Treeview', 
+                       background=[('selected', self.config['COLORS']['table_selected_bg'])],
+                       foreground=[('selected', self.config['COLORS']['table_selected_fg'])])
+        
+        # Table header styling
+        self.style.configure('Treeview.Heading', 
+                             background=self.config['COLORS']['table_header_bg'], 
+                             foreground=self.config['COLORS']['table_header_fg'])
+
+        # Other initialization code
         self.db = None
         self.current_frame = None
-
         self.show_loading_screen()
         threading.Thread(target=self.connect_to_database, daemon=True).start()
 
-        self.master.grid_rowconfigure(0, weight=1)
-        self.master.grid_columnconfigure(0, weight=1)
-
     def load_config(self):
         config = configparser.ConfigParser()
-        config.read('config.ini')
+        config_path = self.get_config_path()
+        if not os.path.exists(config_path):
+            messagebox.showerror("Configuration Error", f"Config file not found: {config_path}")
+            self.master.quit()
+            return None
+        config.read(config_path)
         return config
+
+    def get_config_path(self):
+        if getattr(sys, 'frozen', False):
+            # The application is frozen (running as an executable)
+            return os.path.join(sys._MEIPASS, 'config.ini')
+        else:
+            # The application is not frozen (running as a script)
+            return 'config.ini'
 
     def show_loading_screen(self):
         self.loading_screen = LoadingScreen(self.master)
