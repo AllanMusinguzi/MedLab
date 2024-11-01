@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import tkinter.font as font
+import bcrypt
 
 class AdminPage(tk.Frame):
     def __init__(self, master, db, user_id, username, password, phone_number, logout_callback):
@@ -106,12 +107,12 @@ class AdminPage(tk.Frame):
             self.user_tree.delete(row)
 
         cursor = self.db.cursor()
-        cursor.execute("SELECT is_admin FROM users WHERE username = %s", (self.username,))
-        is_admin = cursor.fetchone()
+        cursor.execute("SELECT role FROM users WHERE username = %s", (self.username,))
+        role = cursor.fetchone()
 
-        if is_admin and is_admin[0]:  
+        if role and role[0]:  
             try:
-                cursor.execute("SELECT user_id, username, is_admin FROM users")
+                cursor.execute("SELECT user_id, username, role FROM users")
                 count = 0 
                 for user in cursor.fetchall():
                     user_type = "Admin" if user[2] else "User"
@@ -130,11 +131,17 @@ class AdminPage(tk.Frame):
         if username:
             password = simpledialog.askstring("Add User", "Enter password:", show='*')
             if password:
-                is_admin = messagebox.askyesno("Add User", "Is this user an admin?")
+                role = messagebox.askyesno("Add User", "Is this user an admin?")
+                
+                # Hash the password with bcrypt
+                hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
                 cursor = self.db.cursor()
                 try:
-                    cursor.execute("INSERT INTO users (username, password, is_admin) VALUES (%s, %s, %s)",
-                                (username, password, is_admin))
+                    cursor.execute(
+                        "INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
+                        (username, hashed_password.decode('utf-8'), role)
+                    )
                     self.db.commit()
                     messagebox.showinfo("Success", "User added successfully")
                     self.load_users()
@@ -146,24 +153,27 @@ class AdminPage(tk.Frame):
     def modify_user(self):
         selection = self.user_tree.selection()
         if selection:
-            user_id = self.user_tree.item(selection)['values'][0] 
+            user_id = self.user_tree.item(selection)['values'][0]
 
             new_username = simpledialog.askstring("Modify User", "Enter new username (or leave blank):")
             new_password = simpledialog.askstring("Modify User", "Enter new password (or leave blank):", show='*')
-            is_admin = messagebox.askyesno("Modify User", "Is this user an admin?")
+            role = messagebox.askyesno("Modify User", "Is this user an admin?")
 
             update_fields = []
             values = []
+
             if new_username:
                 update_fields.append("username = %s")
                 values.append(new_username)
             if new_password:
+                # Hash the new password with bcrypt
+                hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
                 update_fields.append("password = %s")
-                values.append(new_password)
+                values.append(hashed_password.decode('utf-8'))
 
-            update_fields.append("is_admin = %s")
-            values.append(is_admin)
-
+            update_fields.append("role = %s")
+            values.append(role)
+            
             values.append(user_id)
 
             if update_fields:
@@ -172,7 +182,7 @@ class AdminPage(tk.Frame):
                     cursor.execute(f"UPDATE users SET {', '.join(update_fields)} WHERE user_id = %s", tuple(values))
                     self.db.commit()
                     messagebox.showinfo("Success", "User modified successfully")
-                    self.load_users()  
+                    self.load_users()
                 except Exception as e:
                     messagebox.showerror("Error", f"Failed to modify user: {str(e)}")
                 finally:
@@ -181,6 +191,7 @@ class AdminPage(tk.Frame):
                 messagebox.showinfo("No Changes", "No fields were modified.")
         else:
             messagebox.showwarning("Selection Required", "Please select a user to modify.")
+
 
     def delete_user(self):
         selection = self.user_tree.selection()

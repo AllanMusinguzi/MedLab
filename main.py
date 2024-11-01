@@ -4,12 +4,14 @@ import mysql.connector
 from mysql.connector import Error
 import threading
 import configparser
+from datetime import datetime
 import os
 import sys
 
 from pages.login_signup import LoginSignup
 from pages.user_page import UserPage
 from pages.admin_page import AdminPage
+from pages.superAdmin import SuperAdminPage
 
 class LoadingScreen(tk.Toplevel):
     def __init__(self, master):
@@ -166,14 +168,84 @@ class MedicalLabSystem:
         login_signup_frame = LoginSignup(self.current_frame.scrollable_frame, self.db, self.login_callback)
         login_signup_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
-    def show_user_page(self, user_id):
+
+    def login_callback(self, username, role):
+        try:
+            cursor = self.db.cursor()
+            cursor.execute("""
+                SELECT user_id, phone_number, password
+                FROM users
+                WHERE username = %s
+            """, (username,))
+            
+            user_details = cursor.fetchone()
+            
+            if user_details:
+                user_id = user_details[0]
+                phone_number = user_details[1]
+                password = user_details[2]
+                
+                # Store essential session info
+                self.current_session = {
+                    'user_id': user_id,
+                    'username': username,
+                    'role': role,
+                    'phone_number': phone_number,
+                    'password': password,
+                    'login_time': datetime.now()
+                }
+                
+                # Route to appropriate page based on role
+                if role == 'superadmin':
+                    self.show_superadmin_page(
+                        user_id=user_id,
+                        username=username,
+                        password=password,
+                        phone_number=phone_number
+                    )
+                elif role == 'admin':
+                    self.show_admin_page(
+                        user_id=user_id,
+                        username=username,
+                        password=password,
+                        phone_number=phone_number
+                    )
+                elif role == 'user':
+                    self.show_user_page(
+                        user_id=user_id,
+                        username=username,
+                        password=password,
+                        phone_number=phone_number
+                    )
+                else:
+                    messagebox.showerror("Error", "Invalid user role.")
+                    
+            else:
+                messagebox.showerror("Error", "User details not found.")
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load page: {str(e)}")
+            
+        finally:
+            cursor.close()
+
+    def show_user_page(self, user_id, username, password, phone_number):
         try:
             self.clear_current_frame()
             self.current_frame = ScrollableFrame(self.master)
             self.current_frame.pack(fill="both", expand=True)
             
-            user_page_frame = UserPage(self.current_frame.scrollable_frame, self.db, user_id, self.logout_callback)
+            user_page_frame = UserPage(
+                master=self.current_frame.scrollable_frame,
+                db=self.db,
+                user_id=user_id,
+                username=username,
+                password=password,
+                phone_number=phone_number,
+                logout_callback=self.logout_callback
+            )
             user_page_frame.pack(fill="both", expand=True, padx=20, pady=20)
+            
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load user page: {str(e)}")
 
@@ -183,23 +255,43 @@ class MedicalLabSystem:
             self.current_frame = ScrollableFrame(self.master)
             self.current_frame.pack(fill="both", expand=True)
             
-            admin_page_frame = AdminPage(self.current_frame.scrollable_frame, self.db, user_id, username, password, phone_number, self.logout_callback)
+            admin_page_frame = AdminPage(
+                master=self.current_frame.scrollable_frame,
+                db=self.db,
+                user_id=user_id,
+                username=username,
+                password=password,
+                phone_number=phone_number,
+                logout_callback=self.logout_callback
+            )
             admin_page_frame.pack(fill="both", expand=True, padx=20, pady=20)
+            
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load admin page: {str(e)}")
+
+    def show_superadmin_page(self, user_id, username, password, phone_number):
+        try:
+            self.clear_current_frame()
+            self.current_frame = ScrollableFrame(self.master)
+            self.current_frame.pack(fill="both", expand=True)
+            
+            superadmin_page_frame = SuperAdminPage(
+                master=self.current_frame.scrollable_frame,
+                db=self.db,
+                user_id=user_id,
+                username=username,
+                password=password,
+                phone_number=phone_number,
+                logout_callback=self.logout_callback
+            )
+            superadmin_page_frame.pack(fill="both", expand=True, padx=20, pady=20)
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load superadmin page: {str(e)}")
 
     def clear_current_frame(self):
         if self.current_frame:
             self.current_frame.destroy()
-
-    def login_callback(self, user_id, is_admin, username, password, phone_number):
-        try:
-            if is_admin:
-                self.show_admin_page(user_id, username, password, phone_number)
-            else:
-                self.show_user_page(user_id)
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to load page: {str(e)}")
 
     def logout_callback(self):
         self.show_login_signup()
