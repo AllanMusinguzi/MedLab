@@ -18,17 +18,16 @@ class LoginSignup(ttk.Frame):
         self.configure(width=650, height=600)
         self.pack_propagate(False)  # Prevent the frame from shrinking
         
+        # Setup style
         self.style = ttk.Style()
         self.style.theme_use('clam')
         self.style.configure('TLabel', font=('Ubuntu', 12))
         self.style.configure('TEntry', font=('Ubuntu', 12))
         self.style.configure('TButton', font=('Ubuntu', 12))
         self.style.configure('Title.TLabel', font=('Ubuntu', 14, 'bold'))
-        
-        # Configure notebook style for better visibility
         self.style.configure('Custom.TNotebook', tabposition='n')
-        self.style.configure('Custom.TNotebook.Tab', padding=[40, 10], width=20, font=('Ubuntu', 12))
-
+        self.style.configure('Custom.TNotebook.Tab', padding=[40, 10], width=20, font=('Ubuntu', 12), anchor="center")
+        
         self.create_widgets()
 
     def create_widgets(self):
@@ -36,132 +35,182 @@ class LoginSignup(ttk.Frame):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
-        # Create main notebook with increased padding
-        self.notebook = ttk.Notebook(self, style='Custom.TNotebook')
-        self.notebook.grid(row=0, column=0, sticky='nsew', padx=40, pady=30)
+        # Custom style to hide notebook tabs
+        style = ttk.Style()
+        style.layout("Custom.TNotebook.Tab", [])  # Removes tabs from the notebook
 
-        # Create frames with increased padding
+        # Notebook with hidden tabs
+        self.notebook = ttk.Notebook(self, style="Custom.TNotebook")
+        self.notebook.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+
+        # Frames for login and signup forms
         self.login_frame = ttk.Frame(self.notebook, padding=20)
         self.signup_frame = ttk.Frame(self.notebook, padding=20)
 
-        self.notebook.add(self.login_frame, text='Login')
-        self.notebook.add(self.signup_frame, text='Sign Up')
+        # Add frames to notebook without visible tabs
+        self.notebook.add(self.login_frame)
+        self.notebook.add(self.signup_frame)
 
-        # Configure login and signup frames to expand properly
+        # Configure frame for central alignment
         for frame in (self.login_frame, self.signup_frame):
             frame.columnconfigure(0, weight=1)
             frame.rowconfigure(0, weight=1)
 
+        # Create login and signup forms
         self.create_login_form()
         self.create_signup_form()
 
-
     def create_login_form(self):
-        # Configure the login frame to allow for centering
-        self.login_frame.columnconfigure(0, weight=1)
-        self.login_frame.columnconfigure(1, weight=1)
-
-        # Create main frame with reduced padding
-        main_frame = ttk.Frame(self.login_frame, padding="10 5 10 5")
-        main_frame.grid(row=0, column=0, columnspan=2, sticky='nsew')
-        
-        # Configure main_frame columns to allow stretching
+        # Main frame for login fields
+        main_frame = ttk.Frame(self.login_frame, padding="20")
+        main_frame.grid(row=0, column=0, sticky="nsew")
         main_frame.columnconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
 
-        # Login fields with reduced spacing
-        ttk.Label(main_frame, text="Username:").grid(row=0, column=0, sticky=tk.E, pady=5)
-        self.login_username = ttk.Entry(main_frame, width=40)
-        self.login_username.grid(row=0, column=1, sticky='w', pady=5, padx=(5, 0))
+        # Heading/Title for the login form
+        heading_label = ttk.Label(main_frame, text="Login to Your Account", font=('Ubuntu', 16, 'bold'))
+        heading_label.grid(row=0, column=0, columnspan=2, pady=(0, 20), sticky="n")
 
-        ttk.Label(main_frame, text="Password:").grid(row=1, column=0, sticky=tk.E, pady=5)
-        self.login_password = ttk.Entry(main_frame, show="*", width=40)
-        self.login_password.grid(row=1, column=1, sticky='w', pady=5, padx=(5, 0))
-
-        # Login button with reduced padding
-        button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=2, column=0, columnspan=2, pady=20)
-
-        # Center the button
-        ttk.Button(button_frame, text="Login", command=self.login, padding=(15, 5)).pack()
-
-        # Center the button frame within the main frame
-        button_frame.grid_columnconfigure(0, weight=1)
+        # Username and Password fields with reduced spacing
+        ttk.Label(main_frame, text="Username:").grid(row=1, column=0, sticky="e", pady=10)
+        self.login_username = ttk.Entry(main_frame, width=30)
+        self.login_username.grid(row=1, column=1, sticky="w", pady=10, padx=(5, 0))
         
+        ttk.Label(main_frame, text="Password:").grid(row=2, column=0, sticky="e", pady=10)
+        self.login_password = ttk.Entry(main_frame, show="*", width=30)
+        self.login_password.grid(row=2, column=1, sticky="w", pady=10, padx=(5, 0))
+
+        # Login button with padding
+        button_frame = ttk.Frame(main_frame)
+        button_frame.grid(row=3, column=0, columnspan=2, pady=15)
+        button_frame.grid_columnconfigure(0, weight=1)
+        ttk.Button(button_frame, text="Login", command=self.login, padding=(10, 5)).pack()
+
+        # "Switch to Sign Up" text with clickable "Right here" link
+        switch_to_signup_label = ttk.Label(main_frame, text="Don't have an account?")
+        switch_to_signup_label.grid(row=4, column=0, sticky="e", pady=10)
+        
+        switch_to_signup_link = ttk.Label(main_frame, text="Right here", cursor="hand2", font=('Ubuntu'))
+        switch_to_signup_link.grid(row=4, column=1, sticky="w", pady=10)
+        switch_to_signup_link.bind("<Button-1>", lambda e: self.notebook.select(self.signup_frame))
+
 
     def create_signup_form(self):
+        # Configure column weights for centering
         self.signup_frame.columnconfigure(0, weight=1)
         self.signup_frame.columnconfigure(1, weight=1)
-
-        # Create main frame with reduced padding
-        main_frame = ttk.Frame(self.signup_frame, padding="10 5 10 5")
-        main_frame.grid(row=1, column=0, sticky='nsew')
+        
+        # Main frame to hold signup form fields, centered within signup frame
+        main_frame = ttk.Frame(self.signup_frame, padding="20")
+        main_frame.grid(row=0, column=0, sticky='nsew', padx=20, pady=20)
         main_frame.columnconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
 
-        current_row = 0
+                # Heading/Title for the login form
+        heading_label = ttk.Label(main_frame, text="Create Your Account", font=('Ubuntu', 16, 'bold'))
+        heading_label.grid(row=0, column=0, columnspan=2, pady=(0, 20), sticky="n")
 
+        current_row = 1
+        
         # Profile picture section
-        ttk.Label(main_frame, text="Profile Picture:").grid(row=current_row, column=0, sticky=tk.E, pady=5)
+        ttk.Label(main_frame, text="Profile Picture:").grid(
+            row=current_row, column=0, sticky=tk.E, pady=5
+        )
         profile_frame = ttk.Frame(main_frame)
         profile_frame.grid(row=current_row, column=1, sticky='w', pady=5, padx=(5, 0))
+        
+        # Profile preview and choose picture button
         self.profile_preview = ttk.Label(profile_frame)
         self.profile_preview.pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(profile_frame, text="Choose Picture", command=self.choose_profile_picture).pack(side=tk.LEFT)
-
+        ttk.Button(
+            profile_frame,
+            text="Choose Picture",
+            command=self.choose_profile_picture,
+            width=15
+        ).pack(side=tk.LEFT)
+        
         current_row += 1
-
-        # Main fields with reduced spacing
+        
+        # Fields for form inputs
         fields = [
             ("Full Name:", "signup_full_name"),
             ("Email:", "signup_email"),
             ("Phone Number:", "signup_phone_number"),
             ("Username:", "signup_username"),
+            ("Address:", "signup_address"),            
             ("Password:", "signup_password"),
-            ("Confirm Password:", "signup_confirm_password"),
-            ("Address:", "signup_address")
+            ("Confirm Password:", "signup_confirm_password")
         ]
+        
+        # Create StringVar for each field
+        self.field_vars = {attr: tk.StringVar() for _, attr in fields}
 
+        # Create form fields
         for label, attr in fields:
-            ttk.Label(main_frame, text=label).grid(row=current_row, column=0, sticky=tk.E, pady=5)
-            entry = ttk.Entry(main_frame, width=40 if attr != "signup_address" else 50)
+            ttk.Label(main_frame, text=label).grid(
+                row=current_row, column=0, sticky=tk.E, pady=5
+            )
+            
+            # Special handling for password fields
+            if "password" in attr:
+                entry = ttk.Entry(
+                    main_frame,
+                    width=30,
+                    show="*",
+                    textvariable=self.field_vars[attr]
+                )
+            else:
+                entry = ttk.Entry(
+                    main_frame,
+                    width=30 if attr == "signup_address" else 30,
+                    textvariable=self.field_vars[attr]
+                )
+            
             entry.grid(row=current_row, column=1, sticky='w', pady=5, padx=(5, 0))
             setattr(self, attr, entry)
-
-            if "password" in attr:
-                entry.config(show="*")
-
             current_row += 1
-
-        # Role selection
-        ttk.Label(main_frame, text="Role:").grid(row=current_row, column=0, sticky=tk.E, pady=5)
-        self.role_var = tk.StringVar(value="User")  # Default role
-        role_options = ["User", "Admin"]
-        self.role_combobox = ttk.Combobox(main_frame, textvariable=self.role_var, values=role_options, state="readonly")
-        self.role_combobox.grid(row=current_row, column=1, sticky='w', pady=5, padx=(5, 0))
-
-        current_row += 1
-
-        # Preferences section with reduced spacing
-        ttk.Label(main_frame, text="Preferences:").grid(row=current_row, column=0, sticky=tk.E, pady=5)
-        self.preferences_frame = ttk.Frame(main_frame)
-        self.preferences_frame.grid(row=current_row, column=1, sticky='w', pady=5, padx=(5, 0))
-
-        self.pref_vars = {
-            'notifications': tk.BooleanVar(),
-            'newsletter': tk.BooleanVar(),
-            'dark_mode': tk.BooleanVar()
-        }
-
-        for i, (pref, var) in enumerate(self.pref_vars.items()):
-            ttk.Checkbutton(self.preferences_frame, text=pref.title(), variable=var).grid(row=0, column=i, padx=5)
-
-        current_row += 1
-
-        # Signup button with reduced padding
+            
+            # Password visibility toggle after confirm password field
+            if attr == "signup_confirm_password":
+                toggle_frame = ttk.Frame(main_frame)
+                toggle_frame.grid(
+                    row=current_row,
+                    column=1,
+                    sticky='w',
+                    pady=(0, 5),
+                    padx=(5, 0)
+                )
+                self.toggle_password_btn = ttk.Button(
+                    toggle_frame,
+                    text="Show/Hide",
+                    command=self.toggle_password_visibility,
+                    width=7.5
+                )
+                self.toggle_password_btn.pack(side=tk.LEFT)
+                current_row += 1
+        
+        # Initialize password visibility state
+        self.password_visible = False
+        
+        # Signup button
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=current_row, column=0, columnspan=2, pady=20)
-        ttk.Button(button_frame, text="Sign Up", command=self.signup, padding=(15, 5)).pack()
+        button_frame.grid(row=current_row, column=0, columnspan=2, pady=15)
+        ttk.Button(
+            button_frame,
+            text="Sign Up",
+            command=self.signup,
+            padding=(7.5, 5),
+            width=15  
+        ).pack()
+
+        # "Back to Login" link
+        login_link = ttk.Label(
+            button_frame,
+            text="Already have an account? Login",
+            cursor="hand2"
+        )
+        login_link.pack(pady=(10, 0))
+        login_link.bind("<Button-1>", lambda e: self.notebook.select(self.login_frame))
 
 
     def choose_profile_picture(self):
@@ -243,42 +292,69 @@ class LoginSignup(ttk.Frame):
             cursor.close()
 
     def signup(self):
-        full_name = self.signup_full_name.get()
-        email = self.signup_email.get()
-        phone_number = self.signup_phone_number.get()
-        username = self.signup_username.get()
+        # Get values and strip whitespace
+        full_name = self.signup_full_name.get().strip()
+        email = self.signup_email.get().strip()
+        phone_number = self.signup_phone_number.get().strip()
+        username = self.signup_username.get().strip()
         password = self.signup_password.get()
+        address = self.signup_address.get().strip()        
         confirm_password = self.signup_confirm_password.get()
-        address = self.signup_address.get()
-        role = self.role_var.get()
 
+        # Validation
         if not all([full_name, email, phone_number, username, password, confirm_password, address]):
             messagebox.showerror("Error", "Please fill in all fields.")
             return
-
+        
         if password != confirm_password:
             messagebox.showerror("Error", "Passwords do not match.")
             return
 
+        # Basic email validation
+        if not '@' in email or not '.' in email:
+            messagebox.showerror("Error", "Please enter a valid email address.")
+            return
+
+        # Hash password
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        preferences = {
-            'notifications': self.pref_vars['notifications'].get(),
-            'newsletter': self.pref_vars['newsletter'].get(),
-            'dark_mode': self.pref_vars['dark_mode'].get()
-        }
 
         cursor = self.db.cursor()
         try:
+            # Check if username already exists
+            cursor.execute("SELECT username FROM users WHERE username = %s", (username,))
+            if cursor.fetchone():
+                messagebox.showerror("Error", "Username already exists. Please choose another.")
+                return
+
+            # Insert new user
             cursor.execute("""
-                INSERT INTO users (full_name, email, phone_number, username, password, 
-                                   profile_picture, address, role, preferences) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (full_name, email, phone_number, username, hashed_password.decode('utf-8'), 
-                      self.profile_picture_path, address, role, json.dumps(preferences)))
+                INSERT INTO users (
+                    full_name, 
+                    email, 
+                    phone_number, 
+                    username, 
+                    password,
+                    profile_picture, 
+                    address, 
+                    role
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                full_name,
+                email,
+                phone_number,
+                username,
+                hashed_password.decode('utf-8'),
+                self.profile_picture_path,
+                address,
+                'user'  # Default role for offline application
+            ))
+            
             self.db.commit()
             messagebox.showinfo("Success", "Account created successfully. You can now log in.")
             self.notebook.select(self.login_frame)
             self.clear_signup_fields()
+            
         except Exception as e:
             messagebox.showerror("Database Error", str(e))
             self.db.rollback()
@@ -286,16 +362,43 @@ class LoginSignup(ttk.Frame):
             cursor.close()
 
     def clear_signup_fields(self):
-        self.signup_full_name.delete(0, tk.END)
-        self.signup_email.delete(0, tk.END)
-        self.signup_phone_number.delete(0, tk.END)
-        self.signup_username.delete(0, tk.END)
-        self.signup_password.delete(0, tk.END)
-        self.signup_confirm_password.delete(0, tk.END)
-        self.signup_address.delete(0, tk.END)
-        self.role_var.set("User")
-        self.profile_picture_path = None
-        self.profile_preview.configure(image='')
+        """Clear all signup fields and reset the profile picture"""
+        entries = [
+            self.signup_full_name,
+            self.signup_email,
+            self.signup_phone_number,
+            self.signup_username,
+            self.signup_password,
+            self.signup_confirm_password,
+            self.signup_address
+        ]
+        
+        # Clear all entry widgets
+        for entry in entries:
+            if hasattr(entry, 'set'):  # If it's a StringVar
+                entry.set('')
+            else:  # If it's an Entry widget
+                entry.delete(0, tk.END)
+        
+        # Reset profile picture if it exists
+        if hasattr(self, 'profile_picture_path'):
+            self.profile_picture_path = None
+        
+        # Reset profile preview if it exists
+        if hasattr(self, 'profile_preview'):
+            self.profile_preview.configure(image='')
+            self.profile_preview.image = None  # Keep a reference to prevent garbage collection
+
+    def toggle_password_visibility(self):
+        """Toggle password visibility for both password fields"""
+        self.password_visible = not self.password_visible
+        show_char = "" if self.password_visible else "*"
+        
+        # Update password fields
+        if isinstance(self.signup_password, tk.Entry):
+            self.signup_password.configure(show=show_char)
+        if isinstance(self.signup_confirm_password, tk.Entry):
+            self.signup_confirm_password.configure(show=show_char)
 
 # Example usage (commented out)
 # root = tk.Tk()

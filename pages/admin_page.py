@@ -547,7 +547,7 @@ class AdminPage(tk.Frame):
         selection = self.patient_tree.selection()  # Get selected item(s) in Treeview
         if selection:
             # Get the first selected item's patient_id (assuming patient_id is stored in the first column)
-            patient_id = int(self.patient_tree.item(selection[0], "values")[0])
+            patient_id = self.patient_tree.item(selection[0], "values")[0]
 
             cursor = self.db.cursor()
             try:
@@ -576,7 +576,7 @@ class AdminPage(tk.Frame):
     def delete_patient(self):
         selection = self.patient_tree.selection()  # Use selection() to get selected item(s)
         if selection:
-            patient_id = int(self.patient_tree.item(selection[0], "values")[0])
+            patient_id = self.patient_tree.item(selection[0], "values")[0]
 
             if messagebox.askyesno("Delete Patient", "Are you sure you want to delete this patient?"):
                 cursor = self.db.cursor()

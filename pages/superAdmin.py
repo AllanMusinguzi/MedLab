@@ -258,7 +258,7 @@ class SuperAdminPage(ttk.Frame):
             cursor.execute("SELECT COUNT(*) FROM users")
             total_users = cursor.fetchone()[0]
             
-            cursor.execute("SELECT COUNT(*) FROM users WHERE status = 'active'")
+            cursor.execute("SELECT COUNT(*) FROM users WHERE is_active = 'active'")
             active_users = cursor.fetchone()[0]
             
             # System metrics
