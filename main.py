@@ -8,22 +8,23 @@ from datetime import datetime
 import os
 import sys
 
-from pages.login_signup import LoginSignup
-from pages.user_page import UserPage
-from pages.admin_page import AdminPage
-from pages.superAdmin import SuperAdminPage
+from pages.loginSignup.loginPage import Login
+from pages.loginSignup.signupPage import Signup
+from pages.usersModule.user_page import UserPage
+from pages.adminModule.dashboard import AdminDashboard
+from pages.superAdminModule.superAdmin import SuperAdminPage
 
 class LoadingScreen(tk.Toplevel):
     def __init__(self, master):
         super().__init__(master)
         self.title("Loading")
-        self.geometry("300x150")
+        self.geometry("300x250")
         self.resizable(False, False)
         self.configure(bg='#f0f0f0')
         self.transient(master)
         self.grab_set()
         
-        self.label = tk.Label(self, text="Loading...", font=('Helvetica', 14), bg='#f0f0f0')
+        self.label = tk.Label(self, text="Loading...", font=('Ubuntu', 14), bg='#f0f0f0')
         self.label.pack(pady=20)
         
         self.progress = ttk.Progressbar(self, orient="horizontal", length=200, mode="indeterminate")
@@ -58,57 +59,61 @@ class MedicalLabSystem:
     def __init__(self, master):
         self.master = master
         self.config = self.load_config()
+        self.current_frame = None
+        self.login_frame = None
+        self.signup_frame = None
 
         # Set main window attributes
         self.master.title(self.config['APP']['title'])
         self.master.geometry(f"{self.config['APP']['initial_width']}x{self.config['APP']['initial_height']}")
         self.master.minsize(int(self.config['APP']['min_width']), int(self.config['APP']['min_height']))
-        self.master.configure(bg=self.config['COLORS']['background'])  # Apply main background color
+        self.master.configure(bg=self.config['COLORS']['background'])
 
         # Initialize styles
+        self.init_styles()
+        
+        # Other initialization code
+        self.db = None
+        self.show_loading_screen()
+        threading.Thread(target=self.connect_to_database, daemon=True).start()
+
+    def init_styles(self):
         self.style = ttk.Style()
         self.style.theme_use(self.config['THEME']['style'])
         self.style.configure('.', font=(self.config['THEME']['font_family'], int(self.config['THEME']['font_size'])))
         
         # Button styling
         self.style.configure('TButton', 
-                             background=self.config['COLORS']['button_bg'], 
-                             foreground=self.config['COLORS']['button_fg'],
-                             padding=int(self.config['THEME']['button_padding']))
+                           background=self.config['COLORS']['button_bg'], 
+                           foreground=self.config['COLORS']['button_fg'],
+                           padding=int(self.config['THEME']['button_padding']))
         self.style.map('TButton',
-                       background=[('active', self.config['COLORS']['button_active']),
-                                   ('disabled', self.config['COLORS']['button_disabled'])])
+                      background=[('active', self.config['COLORS']['button_active']),
+                                ('disabled', self.config['COLORS']['button_disabled'])])
 
         # Entry styling
         self.style.configure('TEntry', 
-                             fieldbackground=self.config['COLORS']['entry_bg'],
-                             foreground=self.config['COLORS']['entry_fg'],
-                             bordercolor=self.config['COLORS']['entry_border'])
+                           fieldbackground=self.config['COLORS']['entry_bg'],
+                           foreground=self.config['COLORS']['entry_fg'],
+                           bordercolor=self.config['COLORS']['entry_border'])
         
         # Label styling
         self.style.configure('TLabel', 
-                             background=self.config['COLORS']['background'], 
-                             foreground=self.config['COLORS']['label_fg'])
+                           background=self.config['COLORS']['background'], 
+                           foreground=self.config['COLORS']['label_fg'])
 
-        # Treeview (Table) styling
+        # Treeview styling
         self.style.configure('Treeview', 
-                             background=self.config['COLORS']['table_bg'],
-                             foreground=self.config['COLORS']['table_fg'],
-                             fieldbackground=self.config['COLORS']['table_bg'])
+                           background=self.config['COLORS']['table_bg'],
+                           foreground=self.config['COLORS']['table_fg'],
+                           fieldbackground=self.config['COLORS']['table_bg'])
         self.style.map('Treeview', 
-                       background=[('selected', self.config['COLORS']['table_selected_bg'])],
-                       foreground=[('selected', self.config['COLORS']['table_selected_fg'])])
+                      background=[('selected', self.config['COLORS']['table_selected_bg'])],
+                      foreground=[('selected', self.config['COLORS']['table_selected_fg'])])
         
-        # Table header styling
         self.style.configure('Treeview.Heading', 
-                             background=self.config['COLORS']['table_header_bg'], 
-                             foreground=self.config['COLORS']['table_header_fg'])
-
-        # Other initialization code
-        self.db = None
-        self.current_frame = None
-        self.show_loading_screen()
-        threading.Thread(target=self.connect_to_database, daemon=True).start()
+                           background=self.config['COLORS']['table_header_bg'], 
+                           foreground=self.config['COLORS']['table_header_fg'])
 
     def load_config(self):
         config = configparser.ConfigParser()
@@ -122,10 +127,8 @@ class MedicalLabSystem:
 
     def get_config_path(self):
         if getattr(sys, 'frozen', False):
-            # The application is frozen (running as an executable)
             return os.path.join(sys._MEIPASS, 'config.ini')
         else:
-            # The application is not frozen (running as a script)
             return 'config.ini'
 
     def show_loading_screen(self):
@@ -152,21 +155,39 @@ class MedicalLabSystem:
     def show_connection_error(self, error_message):
         self.hide_loading_screen()
         messagebox.showerror("Database Connection Error", 
-                             f"Unable to connect to the database. Please check your connection settings.\n\nError: {error_message}")
+                           f"Unable to connect to the database. Please check your connection settings.\n\nError: {error_message}")
         self.master.quit()
 
     def initialize_app(self):
         self.hide_loading_screen()
         if self.db:
-            self.show_login_signup()
+            self.show_login()
 
-    def show_login_signup(self):
+    def show_login(self):
         self.clear_current_frame()
         self.current_frame = ScrollableFrame(self.master)
-        self.current_frame.pack(fill="both", expand=True)
+        self.current_frame.pack(fill="both", expand=False)
         
-        login_signup_frame = LoginSignup(self.current_frame.scrollable_frame, self.db, self.login_callback)
-        login_signup_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self.login_frame = Login(
+            master=self.current_frame.scrollable_frame,
+            db=self.db,
+            on_login_success=self.login_callback,  # Updated parameter name
+            on_switch_to_signup=self.show_signup   # Updated parameter name
+        )
+        self.login_frame.pack(fill="both", expand=False, padx=20, pady=120)
+
+    def show_signup(self):
+        self.clear_current_frame()
+        self.current_frame = ScrollableFrame(self.master)
+        self.current_frame.pack(fill="both", expand=False)
+        
+        self.signup_frame = Signup(
+            master=self.current_frame.scrollable_frame,
+            db=self.db,
+            on_signup_success=self.show_login,     # Updated parameter name
+            on_switch_to_login=self.show_login     # Updated parameter name
+        )
+        self.signup_frame.pack(fill="both", expand=False, padx=20, pady=20)
 
 
     def login_callback(self, username, role):
@@ -185,7 +206,6 @@ class MedicalLabSystem:
                 phone_number = user_details[1]
                 password = user_details[2]
                 
-                # Store essential session info
                 self.current_session = {
                     'user_id': user_id,
                     'username': username,
@@ -195,7 +215,6 @@ class MedicalLabSystem:
                     'login_time': datetime.now()
                 }
                 
-                # Route to appropriate page based on role
                 if role == 'superadmin':
                     self.show_superadmin_page(
                         user_id=user_id,
@@ -255,7 +274,7 @@ class MedicalLabSystem:
             self.current_frame = ScrollableFrame(self.master)
             self.current_frame.pack(fill="both", expand=True)
             
-            admin_page_frame = AdminPage(
+            admin_page_frame = AdminDashboard(
                 master=self.current_frame.scrollable_frame,
                 db=self.db,
                 user_id=user_id,
@@ -267,7 +286,7 @@ class MedicalLabSystem:
             admin_page_frame.pack(fill="both", expand=True, padx=20, pady=20)
             
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to load admin page: {str(e)}")
+            messagebox.showerror("Error", f"Failed to load adminDashboard: {str(e)}")
 
     def show_superadmin_page(self, user_id, username, password, phone_number):
         try:
@@ -294,7 +313,7 @@ class MedicalLabSystem:
             self.current_frame.destroy()
 
     def logout_callback(self):
-        self.show_login_signup()
+        self.show_login()
 
     def on_closing(self):
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
@@ -305,4 +324,5 @@ class MedicalLabSystem:
 if __name__ == "__main__":
     root = tk.Tk()
     app = MedicalLabSystem(root)
+    root.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.mainloop()
