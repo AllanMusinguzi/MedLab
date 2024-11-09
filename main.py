@@ -8,11 +8,11 @@ from datetime import datetime
 import os
 import sys
 
-from pages.loginSignup.loginPage import Login
-from pages.loginSignup.signupPage import Signup
-from pages.usersModule.user_page import UserPage
-from pages.adminModule.dashboard import AdminDashboard
-from pages.superAdminModule.superAdmin import SuperAdminPage
+from Modules.loginSignup.loginPage import Login
+from Modules.loginSignup.signupPage import Signup
+from Modules.usersModule.user_page import UserPage
+from Modules.adminModule.dashboard import AdminDashboard
+from Modules.superAdminModule.SuperAdmin import SuperAdminPage
 
 class LoadingScreen(tk.Toplevel):
     def __init__(self, master):
@@ -23,6 +23,10 @@ class LoadingScreen(tk.Toplevel):
         self.configure(bg='#f0f0f0')
         self.transient(master)
         self.grab_set()
+
+        # Configure root window grid weights
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
         
         self.label = tk.Label(self, text="Loading...", font=('Ubuntu', 14), bg='#f0f0f0')
         self.label.pack(pady=20)
@@ -31,29 +35,6 @@ class LoadingScreen(tk.Toplevel):
         self.progress.pack(pady=10)
         self.progress.start()
 
-class ScrollableFrame(ttk.Frame):
-    def __init__(self, container, *args, **kwargs):
-        super().__init__(container, *args, **kwargs)
-        self.canvas = tk.Canvas(self, highlightthickness=0)
-        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
-        self.scrollable_frame = ttk.Frame(self.canvas)
-
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        )
-
-        self.canvas_frame = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
-
-        self.canvas.pack(side="left", fill="both", expand=True)
-        self.scrollbar.pack(side="right", fill="y")
-
-        self.canvas.bind('<Configure>', self.resize_frame)
-
-    def resize_frame(self, event):
-        self.canvas.itemconfig(self.canvas_frame, width=event.width)
 
 class MedicalLabSystem:
     def __init__(self, master):
@@ -68,6 +49,10 @@ class MedicalLabSystem:
         self.master.geometry(f"{self.config['APP']['initial_width']}x{self.config['APP']['initial_height']}")
         self.master.minsize(int(self.config['APP']['min_width']), int(self.config['APP']['min_height']))
         self.master.configure(bg=self.config['COLORS']['background'])
+
+        # Configure grid weights for root window
+        self.master.grid_rowconfigure(0, weight=1)
+        self.master.grid_columnconfigure(0, weight=1)
 
         # Initialize styles
         self.init_styles()
@@ -164,31 +149,46 @@ class MedicalLabSystem:
             self.show_login()
 
     def show_login(self):
-        self.clear_current_frame()
-        self.current_frame = ScrollableFrame(self.master)
-        self.current_frame.pack(fill="both", expand=False)
+        # Clear any existing frame
+        if self.current_frame:
+            self.current_frame.destroy()
+        
+        # Create a new frame with master as parent
+        self.current_frame = tk.Frame(self.master)
+        self.current_frame.grid(row=0, column=0, sticky="nsew")
+        
+        # Configure grid weights for the current frame
+        self.current_frame.grid_rowconfigure(0, weight=1)
+        self.current_frame.grid_columnconfigure(0, weight=1)
         
         self.login_frame = Login(
-            master=self.current_frame.scrollable_frame,
+            master=self.current_frame,
             db=self.db,
-            on_login_success=self.login_callback,  # Updated parameter name
-            on_switch_to_signup=self.show_signup   # Updated parameter name
+            on_login_success=self.login_callback,  
+            on_switch_to_signup=self.show_signup  
         )
-        self.login_frame.pack(fill="both", expand=False, padx=20, pady=120)
+        self.login_frame.grid(row=0, column=0, sticky="nsew")
 
     def show_signup(self):
-        self.clear_current_frame()
-        self.current_frame = ScrollableFrame(self.master)
-        self.current_frame.pack(fill="both", expand=False)
+        # Clear any existing frame
+        if self.current_frame:
+            self.current_frame.destroy()
+            
+        # Create a new frame with master as parent
+        self.current_frame = tk.Frame(self.master)
+        self.current_frame.grid(row=0, column=0, sticky="nsew")
+        
+        # Configure grid weights for the current frame
+        self.current_frame.grid_rowconfigure(0, weight=1)
+        self.current_frame.grid_columnconfigure(0, weight=1)
         
         self.signup_frame = Signup(
-            master=self.current_frame.scrollable_frame,
+            master=self.current_frame,
             db=self.db,
-            on_signup_success=self.show_login,     # Updated parameter name
-            on_switch_to_login=self.show_login     # Updated parameter name
+            on_signup_success=self.show_login,    
+            on_switch_to_login=self.show_login   
         )
-        self.signup_frame.pack(fill="both", expand=False, padx=20, pady=20)
-
+        self.signup_frame.grid(row=0, column=0, sticky="nsew")
 
     def login_callback(self, username, role):
         try:
@@ -251,11 +251,13 @@ class MedicalLabSystem:
     def show_user_page(self, user_id, username, password, phone_number):
         try:
             self.clear_current_frame()
-            self.current_frame = ScrollableFrame(self.master)
-            self.current_frame.pack(fill="both", expand=True)
+            
+            # Create new frame with master as parent
+            self.current_frame = tk.Frame(self.master)
+            self.current_frame.grid(row=0, column=0, sticky="nsew")
             
             user_page_frame = UserPage(
-                master=self.current_frame.scrollable_frame,
+                master=self.current_frame,
                 db=self.db,
                 user_id=user_id,
                 username=username,
@@ -263,7 +265,7 @@ class MedicalLabSystem:
                 phone_number=phone_number,
                 logout_callback=self.logout_callback
             )
-            user_page_frame.pack(fill="both", expand=True, padx=20, pady=20)
+            user_page_frame.grid(row=0, column=0, sticky="nsew")
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load user page: {str(e)}")
@@ -271,11 +273,13 @@ class MedicalLabSystem:
     def show_admin_page(self, user_id, username, password, phone_number):
         try:
             self.clear_current_frame()
-            self.current_frame = ScrollableFrame(self.master)
-            self.current_frame.pack(fill="both", expand=True)
+            
+            # Create new frame with master as parent
+            self.current_frame = tk.Frame(self.master)
+            self.current_frame.grid(row=0, column=0, sticky="nsew")
             
             admin_page_frame = AdminDashboard(
-                master=self.current_frame.scrollable_frame,
+                master=self.current_frame,
                 db=self.db,
                 user_id=user_id,
                 username=username,
@@ -283,7 +287,7 @@ class MedicalLabSystem:
                 phone_number=phone_number,
                 logout_callback=self.logout_callback
             )
-            admin_page_frame.pack(fill="both", expand=True, padx=20, pady=20)
+            admin_page_frame.grid(row=0, column=0, sticky="nsew")
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load adminDashboard: {str(e)}")
@@ -291,11 +295,13 @@ class MedicalLabSystem:
     def show_superadmin_page(self, user_id, username, password, phone_number):
         try:
             self.clear_current_frame()
-            self.current_frame = ScrollableFrame(self.master)
-            self.current_frame.pack(fill="both", expand=True)
+            
+            # Create new frame with master as parent
+            self.current_frame = tk.Frame(self.master)
+            self.current_frame.grid(row=0, column=0, sticky="nsew")
             
             superadmin_page_frame = SuperAdminPage(
-                master=self.current_frame.scrollable_frame,
+                master=self.current_frame,
                 db=self.db,
                 user_id=user_id,
                 username=username,
@@ -303,7 +309,7 @@ class MedicalLabSystem:
                 phone_number=phone_number,
                 logout_callback=self.logout_callback
             )
-            superadmin_page_frame.pack(fill="both", expand=True, padx=20, pady=20)
+            superadmin_page_frame.grid(row=0, column=0, sticky="nsew")
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load superadmin page: {str(e)}")
@@ -311,6 +317,7 @@ class MedicalLabSystem:
     def clear_current_frame(self):
         if self.current_frame:
             self.current_frame.destroy()
+            self.current_frame = None
 
     def logout_callback(self):
         self.show_login()
