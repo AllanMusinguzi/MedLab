@@ -12,9 +12,9 @@ from Modules.superAdminModule.Tests import TestsView
 from Modules.superAdminModule.Results import ResultsView
 from Modules.superAdminModule.Settings import SettingsView
 
-class SuperAdminPage(ctk.CTk):
-    def __init__(self, db, user_id, username, password, phone_number, logout_callback, master):
-        super().__init__()
+class SuperAdminPage(ttk.Frame):
+    def __init__(self, master, db, user_id, username, password, phone_number, logout_callback):
+        super().__init__(master)
         
         # Store user data
         self.master = master
@@ -26,8 +26,8 @@ class SuperAdminPage(ctk.CTk):
         self.logout_callback = logout_callback
         
         # Configure window
-        self.title("Laboratory Management System - Super Admin")
-        self.geometry("1200x700")
+        #self.title("Laboratory Management System - Super Admin")
+        #self.geometry("1200x700")
         
         # Configure grid layout
         self.grid_rowconfigure(0, weight=1)
@@ -42,7 +42,7 @@ class SuperAdminPage(ctk.CTk):
         self.create_main_frame()
         
         # Initialize data
-        self.load_data()
+        #self.load_data()
         
         # Show initial dashboard view
         self.show_dashboard()
@@ -134,7 +134,7 @@ class SuperAdminPage(ctk.CTk):
         
     def show_users(self):
         self.clear_main_frame()
-        UsersView(self.main_frame)
+        UsersView(self.main_frame, self.db)
         self.select_frame_by_name("users")
         
     def show_patients(self):
@@ -172,8 +172,3 @@ class SuperAdminPage(ctk.CTk):
         
     def change_appearance_mode_event(self, new_appearance_mode):
         ctk.set_appearance_mode(new_appearance_mode)
-'''
-if __name__ == "__main__":
-    app = SuperAdminDashboard()
-    app.mainloop()
-    '''

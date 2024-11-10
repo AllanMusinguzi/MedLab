@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import tkinter as tk
 from tkinter import ttk, messagebox
 import bcrypt
 import json
@@ -12,12 +13,27 @@ class UsersView(ctk.CTkFrame):
         self.rowconfigure(2, weight=1)
         self.create_widgets()
         self.setup_styles()
-        self.load_data()  # Load initial data from database
-        
+        self.load_data()  
+        self._all_items = []
+
+        self._last_sort_col = None
+        self._last_sort_reverse = False
+
+       
     def setup_styles(self):
         style = ttk.Style()
-        style.configure("Treeview", rowheight=30, font=('Arial', 10))
-        style.configure("Treeview.Heading", font=('Arial', 10, 'bold'))
+        style.configure("Treeview", 
+                    rowheight=30, 
+                    font=('Ubuntu', 10),
+                    foreground='black',
+                    background='white'  # Optional: set background color
+                    )
+        
+        style.configure("Treeview.Heading", 
+                    font=('Ubuntu', 11, 'bold'),
+                    foreground='black',
+                    background='white'  # Optional: set background color for headers
+                    )
         
     def create_widgets(self):
         # Header with Add User button
@@ -86,24 +102,31 @@ class UsersView(ctk.CTkFrame):
         self.tree.bind("<Double-1>", self.on_user_double_click)
         self.tree.bind("<Button-3>", self.show_context_menu)
 
+
     def load_data(self):
         # Clear existing items
         for item in self.tree.get_children():
             self.tree.delete(item)
-            
+                
         try:
             cursor = self.db.cursor()
             cursor.execute("""
                 SELECT user_id, full_name, email, phone_number, username, 
-                       address, role FROM users
+                    address, role FROM users
             """)
             users = cursor.fetchall()
             cursor.close()
             
+            # Insert data into treeview
             for user in users:
                 self.tree.insert("", "end", values=user)
+                
+            # Store all items after loading
+            self._all_items = self.tree.get_children()
+                
         except Exception as e:
             messagebox.showerror("Database Error", str(e))
+
 
     def show_add_user_dialog(self):
         dialog = AddUserDialog(self, self.db)
@@ -115,31 +138,98 @@ class UsersView(ctk.CTkFrame):
         self.wait_window(dialog)
         self.load_data()
 
+        
     def filter_users(self, *args):
         search_text = self.search_var.get().lower()
         role_filter = self.role_filter.get()
         
-        for item in self.tree.get_children():
-            values = self.tree.item(item)["values"]
-            matches_search = any(
-                str(value).lower().find(search_text) >= 0 
-                for value in values
+        # Get filtered items
+        filtered_items = []
+        for values in self._all_items:
+            if not values:
+                continue
+                
+            # Convert all values to strings for searching
+            string_values = [str(value).lower() for value in values]
+            
+            # Check if matches search criteria
+            matches_search = (
+                not search_text or
+                any(search_text in value for value in string_values)
             )
+            
+            # Check if matches role filter
             matches_role = (
                 role_filter == "All Roles" or 
-                values[6] == role_filter  # Role is at index 6
+                (len(values) > 6 and str(values[6]) == role_filter)
             )
             
             if matches_search and matches_role:
-                self.tree.item(item, tags=())
-            else:
-                self.tree.detach(item)
-
+                filtered_items.append(values)
+        
+        # Apply current sort to filtered items if there is one
+        if hasattr(self, '_last_sort_col') and self._last_sort_col is not None:
+            col = self._last_sort_col
+            try:
+                filtered_items.sort(
+                    key=lambda x: float(x[col]) if str(x[col]).replace('.', '').isdigit() else str(x[col]).lower(),
+                    reverse=self._last_sort_reverse
+                )
+            except (ValueError, IndexError):
+                filtered_items.sort(
+                    key=lambda x: str(x[col]).lower(),
+                    reverse=self._last_sort_reverse
+                )
+        
+        # Clear and repopulate the tree
+        self.tree.delete(*self.tree.get_children())
+        for values in filtered_items:
+            self.tree.insert('', 'end', values=values)
+            
     def sort_treeview(self, col):
-        items = [(self.tree.set(item, col), item) for item in self.tree.get_children("")]
-        items.sort()
-        for index, (_, item) in enumerate(items):
-            self.tree.move(item, "", index)
+        """Sort treeview content when a column header is clicked."""
+        try:
+            # Toggle sort order if clicking the same column
+            if hasattr(self, '_last_sort_col') and self._last_sort_col == col:
+                self._last_sort_reverse = not self._last_sort_reverse
+            else:
+                self._last_sort_reverse = False
+            
+            self._last_sort_col = col
+            
+            # Get all current items (this preserves filtering)
+            items = []
+            for item in self.tree.get_children(""):
+                values = self.tree.item(item)['values']
+                items.append(values)
+            
+            # Sort the items
+            try:
+                items.sort(
+                    key=lambda x: float(x[col]) if str(x[col]).replace('.', '').isdigit() else str(x[col]).lower(),
+                    reverse=self._last_sort_reverse
+                )
+            except (ValueError, IndexError):
+                items.sort(
+                    key=lambda x: str(x[col]).lower(),
+                    reverse=self._last_sort_reverse
+                )
+            
+            # Clear and repopulate the tree
+            self.tree.delete(*self.tree.get_children())
+            for values in items:
+                self.tree.insert('', 'end', values=values)
+            
+            # Update column headers
+            for column in self.tree["columns"]:
+                if column == col:
+                    direction = "▼" if self._last_sort_reverse else "▲"
+                    self.tree.heading(column, text=f"{self.tree.heading(column)['text'].split(' ')[0]} {direction}")
+                else:
+                    self.tree.heading(column, text=self.tree.heading(column)['text'].split(' ')[0])
+                    
+        except Exception as e:
+            messagebox.showerror("Sorting Error", f"Error sorting column: {str(e)}")
 
     def on_user_double_click(self, event):
         item = self.tree.selection()[0]
@@ -150,7 +240,7 @@ class UsersView(ctk.CTkFrame):
         item = self.tree.identify_row(event.y)
         if item:
             self.tree.selection_set(item)
-            menu = ctk.CTkMenu(self)
+            menu = tk.Menu(self, tearoff=0)
             menu.add_command(
                 label="Edit User", 
                 command=lambda: self.show_edit_user_dialog(
