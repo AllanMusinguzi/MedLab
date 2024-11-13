@@ -3,8 +3,6 @@
 
 **MedLab** is an offline desktop application built with Tkinter to manage laboratory operations. It simplifies and streamlines processes such as patient management, test management, and result tracking, enhancing workflow efficiency for medical laboratories even without an internet connection.
 
----
-
 ## Table of Contents
 
 1. [Features](#features)
@@ -16,8 +14,6 @@
 7. [Contributing](#contributing)
 8. [License](#license)
 
----
-
 ## Features
 
 - **Patient Management**: Add, update, and retrieve patient details.
@@ -26,8 +22,6 @@
 - **User Roles and Permissions**: Supports different roles (Admin, Super Admin, User) with role-specific access control.
 - **Report Generation**: Generate and download reports for patient records and test results.
 - **Offline Operation**: Operates independently of the internet, ideal for low-connectivity areas.
-
----
 
 ## Project Structure
 
@@ -55,7 +49,6 @@ MedLab/
 └── report_generate.py           # Script for generating reports
 ```
 
----
 
 ## Installation
 
@@ -90,7 +83,6 @@ MedLab/
 
    Edit the `config.ini` file to adjust settings such as database path and other configurations as needed.
 
----
 
 ## Configuration
 
@@ -102,7 +94,6 @@ The `config.ini` file is used for application configurations, such as:
 
 Update this file according to your environment and requirements.
 
----
 
 ## Usage
 
@@ -119,7 +110,6 @@ Update this file according to your environment and requirements.
    - Log in or register based on user role.
    - Access patient management, test management, results, and report generation features from the app interface.
 
----
 
 ## Packaging
 
@@ -131,7 +121,6 @@ pyinstaller main.spec
 
 This command will create an executable in the `dist/` folder, which can be distributed and run on other systems.
 
----
 
 ## Contributing
 
@@ -141,8 +130,6 @@ We welcome contributions! To contribute:
 2. Create a new branch for your feature or bugfix.
 3. Make your changes and commit them.
 4. Submit a pull request with a description of your changes.
-
----
 
 ## License
 
