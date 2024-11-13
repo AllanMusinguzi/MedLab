@@ -1,101 +1,153 @@
-Medical Lab Management System
-Table of Contents
 
-    Project Description
-    Features
-    System Requirements
-    Installation
-    Database Configuration
-    Usage
-    Login Credentials
-    Technologies Used
-    License
+# MedLab
 
-Project Description
+**MedLab** is an offline desktop application built with Tkinter to manage laboratory operations. It simplifies and streamlines processes such as patient management, test management, and result tracking, enhancing workflow efficiency for medical laboratories even without an internet connection.
 
-The Medical Lab Management System is designed to simplify and automate the management of medical laboratory operations. It allows administrators and users to manage patient records, test results, and laboratory activities seamlessly. The system provides role-based access for both admins and users, ensuring secure management of sensitive data.
-Features
+---
 
-    User Authentication: Admin and user login functionalities with secure password hashing.
-    Role-based Access Control: Admins have full access to the system, while users have limited access based on their role.
-    Manage Patient Records: Admins can add, update, and delete patient records.
-    Test Management: Manage and record medical test results for patients.
-    Reporting: Generate reports based on test results and patient history.
-    Error Handling: Provides user-friendly error messages for common issues during login and other operations.
+## Table of Contents
 
-System Requirements
+1. [Features](#features)
+2. [Project Structure](#project-structure)
+3. [Installation](#installation)
+4. [Configuration](#configuration)
+5. [Usage](#usage)
+6. [Packaging](#packaging)
+7. [Contributing](#contributing)
+8. [License](#license)
 
-Before running the Medical Lab Management System, ensure your machine meets the following requirements:
+---
 
-    Operating System: Ubuntu (Linux) or any Linux-based distribution
-    Python Version: Python 3.x
-    Database: MySQL or MariaDB (set up via XAMPP or Docker)
-    Libraries/Frameworks: Listed in requirements.txt
+## Features
 
-Installation
+- **Patient Management**: Add, update, and retrieve patient details.
+- **Test Management**: Organize test types, samples, and track their statuses.
+- **Result Management**: Record and access test results for patients.
+- **User Roles and Permissions**: Supports different roles (Admin, Super Admin, User) with role-specific access control.
+- **Report Generation**: Generate and download reports for patient records and test results.
+- **Offline Operation**: Operates independently of the internet, ideal for low-connectivity areas.
 
-  Clone the Repository:
-    git clone https://github.com/your-username/medical-lab-management.git
-    cd medical-lab-management
-    
-  Create a Virtual Environment (optional but recommended):
-    python3 -m venv venv
-    source venv/bin/activate
+---
 
-  Install Dependencies: Install all required Python packages using pip:
-    pip install -r requirements.txt
+## Project Structure
 
-  Configure MySQL Database: Make sure MySQL (or MariaDB) is running, and create a database for the system:
-    CREATE DATABASE medical_lab_db;
+The project files are organized as follows:
 
-Database Configuration
+```
+MedLab/
+├── __pycache__/                 # Python cache files
+├── .vscode/                     # VSCode configuration files
+├── backups/                     # Backups and data files
+├── build/                       # Build output for the application
+├── dist/                        # Distribution files for packaging
+├── Downloads/                   # Temporary downloads folder
+├── icons/                       # Application icons and other images
+├── Modules/                     # Main modules of the application
+│   ├── adminModule/             # Admin-related functionalities
+│   ├── loginSignup/             # Login and signup functionalities
+│   ├── superAdminModule/        # Super Admin-specific functionalities
+│   └── usersModule/             # User-related functionalities
+├── myenv/                       # Virtual environment for dependencies
+├── uploads/                     # Directory for uploaded files
+├── config.ini                   # Configuration file with app settings
+├── main.py                      # Main application script
+├── main.spec                    # PyInstaller spec file for packaging
+└── report_generate.py           # Script for generating reports
+```
 
-  Modify the database configuration in your project to connect to the newly created database:
-    Update the database connection details in the relevant configuration file (e.g., config.py or .env):
-      DATABASE_HOST = 'localhost'
-      DATABASE_USER = 'root'
-      DATABASE_PASSWORD = 'your_password'
-      DATABASE_NAME = 'medical_lab_db'
-      
-  Run Database Migrations (if applicable):
-      python manage.py migrate
+---
 
+## Installation
 
-Usage
+### Prerequisites
 
-    Run the Application:
-      python app.py
-    Login to the system with the following credentials:
-        Admin: Use the admin username and password set during registration.
-        User: Use the user credentials provided during the user creation process.
+- Python 3.x
+- `pip` package manager
 
-    Access the Admin Panel: Once logged in as an admin, you will have access to add patients, update records, manage test results, and generate reports.
+### Steps
 
-    Login Credentials
+1. **Clone the Repository**:
 
-    You can use the following login credentials for testing purposes:
+   ```bash
+   git clone https://github.com/AllanMusinguzi/MedLab.git
+   cd MedLab
+   ```
 
-        Admin:
-            Username: admin
-            Password: admin123
-    
-        User:
-            Username: user
-            Password: user123
+2. **Set Up Virtual Environment** (recommended):
 
-    Make sure to replace these credentials with more secure ones for production use.
-    
-Technologies Used
+   ```bash
+   python -m venv myenv
+   source myenv/bin/activate  # On Windows use `myenv\Scripts\activate`
+   ```
 
-    The Medical Lab Management System is built using the following technologies:
-    
-        Frontend: Tkinter (for GUI)
-        Backend: Python 3, Flask (or another backend framework if applicable)
-        Database: MySQL or MariaDB
-        Libraries:
-            bcrypt (for password hashing)
-            MySQL connector (for database interaction)
+3. **Install Dependencies**:
 
-License
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-    This project is licensed under the MIT License.
+4. **Configure Application**:
+
+   Edit the `config.ini` file to adjust settings such as database path and other configurations as needed.
+
+---
+
+## Configuration
+
+The `config.ini` file is used for application configurations, such as:
+
+- Database settings
+- File storage paths
+- Other app-specific settings
+
+Update this file according to your environment and requirements.
+
+---
+
+## Usage
+
+1. **Run the Application**:
+
+   Start the app using:
+
+   ```bash
+   python main.py
+   ```
+
+2. **Navigate**: 
+
+   - Log in or register based on user role.
+   - Access patient management, test management, results, and report generation features from the app interface.
+
+---
+
+## Packaging
+
+To create a standalone executable, use **PyInstaller** with the provided `main.spec` file:
+
+```bash
+pyinstaller main.spec
+```
+
+This command will create an executable in the `dist/` folder, which can be distributed and run on other systems.
+
+---
+
+## Contributing
+
+We welcome contributions! To contribute:
+
+1. Fork the repository.
+2. Create a new branch for your feature or bugfix.
+3. Make your changes and commit them.
+4. Submit a pull request with a description of your changes.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file for more information.
+
+---
+
+This README file should provide clear, organized information to users and contributors of MedLab. Let me know if there are additional sections you'd like to include!
