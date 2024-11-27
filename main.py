@@ -10,7 +10,7 @@ import sys
 
 from Modules.loginSignup.loginPage import Login
 from Modules.loginSignup.signupPage import Signup
-from Modules.usersModule.user_page import UserPage
+from Modules.usersModule.user_dashboard import UserDashboard
 from Modules.adminModule.dashboard import AdminDashboard
 from Modules.superAdminModule.SuperAdmin import SuperAdminPage
 
@@ -152,6 +152,7 @@ class MedicalLabSystem:
         # Clear any existing frame
         if self.current_frame:
             self.current_frame.destroy()
+            self.current_frame = None
         
         # Create a new frame with master as parent
         self.current_frame = tk.Frame(self.master)
@@ -256,7 +257,7 @@ class MedicalLabSystem:
             self.current_frame = tk.Frame(self.master)
             self.current_frame.grid(row=0, column=0, sticky="nsew")
             
-            user_page_frame = UserPage(
+            user_page_frame = UserDashboard(
                 master=self.current_frame,
                 db=self.db,
                 user_id=user_id,
